@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const dotenv=require('dotenv')
 dotenv.config()
 const authRouter=require('./routes/authRouter')
+const attendanceRouter=require('./routes/attendanceRouter')
 const cors=require('cors')
 const cookieParser=require('cookie-parser')
 // @initializing prisma and express app
@@ -17,6 +18,7 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.use(express.json())
 app.use('/qubinest',authRouter)
+app.use('/qubinest',attendanceRouter)
 app.use(cookieParser())
 
 // @prisma config
