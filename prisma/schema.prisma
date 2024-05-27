@@ -47,9 +47,9 @@ model Attendance{
   employee_id Int 
   date DateTime
   checkin_Time DateTime
-  checkout_Time DateTime
+  checkout_Time DateTime ?
   status String 
-  createdAt DateTime
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   employee  Employee @relation(fields: [employee_id] ,references: [employee_id])
 }

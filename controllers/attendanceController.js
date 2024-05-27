@@ -1,58 +1,59 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const jwt = require('jsonwebtoken');
+const jwtSecret = process.env.jwtSecret;
 
 const userClockin = async (req, res) => {
     try {
-        const creds = req.cookies && req.cookies.email; 
-        if (!creds) {
-            return res.status(400).send('User is not authenticated');
-        }
+        const { email } = req.body;
+        // Find the user based on the provided email
         const user = await prisma.user.findFirst({
             where: {
-                email: creds
-            }
-        });
-        if (!user) {
-            return res.status(400).send('User not found');
-        }
-        // Update or create attendance record
-        const attendanceRecord = await prisma.attendance.upsert({
-            where: {
-                employee_id: user.id,
-                date: new Date().toISOString().slice(0, 10) // Get current date in YYYY-MM-DD format
-            },
-            update: {
-                checkin_Time: new Date(), // Set the check-in time to the current time
-                status: 'Present' // Update the status
-            },
-            create: {
-                employee_id: user.id,
-                date: new Date().toISOString().slice(0, 10), // Set the date to the current date
-                checkin_Time: new Date(), // Set the check-in time to the current time
-                status: 'Present' // Set the status to 'Present'
+                email: {
+                    equals: email
+                }
             }
         });
 
+        // If user not found, return error response
+        if (!user) {
+            return res.status(400).send('User not found');
+        }
+
+        // Format the current date in ISO-8601 format
+        const currentDate = new Date().toISOString(); // Changed to include time as well
+
+        // Create a new attendance record for the user
+        const attendanceRecord = await prisma.attendance.create({
+            data: {
+                employee_id: user.id,
+                date: currentDate, // Use the formatted current date
+                checkin_Time: new Date(),
+                status: 'Present'
+            }
+        });
+
+        // Return success response with the created attendance record
         return res.status(200).json({ message: 'Clock in successful', attendanceRecord });
     } catch (error) {
         console.error('Error clocking in user:', error);
         return res.status(500).send('Internal server error');
     }
-}
+};
+
 const userClockout = async (req, res) => {
     try {
-        const { creds } = req.cookies.email;
-
-        if (!creds) {
-            return res.status(400).send('User is not authenticated');
-        }
-
+        const { email } = req.body; // Destructure email from the request body
+        // Find the user based on the provided email
         const user = await prisma.user.findFirst({
             where: {
-                email: creds
+                email: {
+                    equals: email // Use 'equals' to match the email
+                }
             }
         });
 
+        // If user not found, return error response
         if (!user) {
             return res.status(400).send('User not found');
         }
@@ -67,11 +68,12 @@ const userClockout = async (req, res) => {
             }
         });
 
+        // If no attendance record found, return error response
         if (!latestAttendanceRecord) {
             return res.status(400).send('No attendance record found for the user');
         }
 
-        // Update the latest attendance record with checkout time
+        // Update the latest attendance record with checkout time and status
         const updatedAttendanceRecord = await prisma.attendance.update({
             where: {
                 attendance_id: latestAttendanceRecord.attendance_id
@@ -82,10 +84,12 @@ const userClockout = async (req, res) => {
             }
         });
 
+        // Return success response with the updated attendance record
         return res.status(200).json({ message: 'Clock out successful', updatedAttendanceRecord });
     } catch (error) {
         console.error('Error clocking out user:', error);
         return res.status(500).send('Internal server error');
     }
-}
-module.exports = { userClockin,userClockout };
+};
+
+module.exports = { userClockin, userClockout };

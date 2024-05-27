@@ -3,8 +3,6 @@ const prisma = new PrismaClient();
 const bcrypt=require('bcrypt')
 const jwt=require('jsonwebtoken')
 const jwtSecret=process.env.jwtSecret
-
-
 const registerUser = async (req, res) => {
     try {
         const { username, email, password, position } = req.body;
@@ -61,9 +59,9 @@ const loginUser = async (req, res) => {
       //@Set the token as a cookie in the response
       res.cookie('token', jwtToken, {
         httpOnly: true,
-        sameSite: 'strict', // Enclose 'strict' in quotes
-        expiresIn: 2 * 60 * 60 * 1000, // Convert expiresIn to milliseconds
+        expiresIn: 2 * 60 * 60 * 1000,  
       });
+      
       return res.status(200).json({ message: 'Login successful' });
     } catch (error) {
       console.error(error);
