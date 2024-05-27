@@ -4,7 +4,7 @@ const dotenv=require('dotenv')
 dotenv.config()
 const authRouter=require('./routes/authRouter')
 const cors=require('cors')
-
+const cookieParser=require('cookie-parser')
 // @initializing prisma and express app
 const prisma = new PrismaClient();
 const app = express();
@@ -13,8 +13,7 @@ const app = express();
 app.use(cors())
 app.use(express.json())
 app.use('/qubinest',authRouter)
-
-
+app.use(cookieParser())
 
 // @prisma config
 async function shutdown() {
@@ -23,7 +22,7 @@ async function shutdown() {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT ;
 
 // @starting app
 app.listen(PORT, () => {
