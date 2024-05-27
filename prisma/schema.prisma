@@ -21,7 +21,8 @@ model User{
   username String ?
   email String
   password String 
-  position String ?
+  role Role @default(Employee)
+  createdAt DateTime @default(now()) 
 }
 model Employee{
   employee_id Int @id @default(autoincrement())
@@ -100,3 +101,10 @@ model employeeProjects{
   project Projects @relation(fields: [project_id],references: [project_id])
 }
 
+//enums
+enum Role{
+  Employee
+  Admin
+  Intern 
+  Manager
+}
