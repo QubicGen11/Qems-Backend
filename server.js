@@ -8,9 +8,13 @@ const cookieParser=require('cookie-parser')
 // @initializing prisma and express app
 const prisma = new PrismaClient();
 const app = express();
-
+const corsOptions = {
+  origin:' http://localhost:5173',
+  // origin:' https://qubinest-frontend.vercel.app',
+  credentials: true, // This is required to allow credentials (cookies, headers)
+};
 //@middlewares
-app.use(cors())
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use('/qubinest',authRouter)
 app.use(cookieParser())

@@ -3,6 +3,8 @@ const prisma = new PrismaClient();
 const bcrypt=require('bcrypt')
 const jwt=require('jsonwebtoken')
 const jwtSecret=process.env.jwtSecret
+
+
 const registerUser = async (req, res) => {
     try {
         const { username, email, password, position } = req.body;
@@ -29,6 +31,8 @@ const registerUser = async (req, res) => {
         res.status(500).send('Internal server error');
     }
 };
+
+
 const loginUser = async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -54,20 +58,20 @@ const loginUser = async (req, res) => {
       const jwtToken = jwt.sign({ id: existingUser.id, email: existingUser.email }, jwtSecret, {
         expiresIn: '2h',
       });
-  
       //@Set the token as a cookie in the response
       res.cookie('token', jwtToken, {
         httpOnly: true,
         sameSite: 'strict', // Enclose 'strict' in quotes
         expiresIn: 2 * 60 * 60 * 1000, // Convert expiresIn to milliseconds
       });
-  
       return res.status(200).json({ message: 'Login successful' });
     } catch (error) {
       console.error(error);
       return res.status(500).send('Server error');
     }
   };
+
+
   const logoutUser = async (req, res) => {
     try {
     //   Clear the token cookie by setting an expired date
