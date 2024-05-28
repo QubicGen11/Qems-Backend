@@ -21,31 +21,35 @@ model User{
   username String ?
   email String
   password String 
-  role Role @default(Employee)
+  role String 
   status Status @default(Active)
   createdAt DateTime @default(now()) 
 }
-model Employee{
-  employee_id Int @id @default(autoincrement())
-  firstname String ?
-  lastname String ?
-  dob DateTime ?
-  gender String ?
-  address String ?
-  phone String ?
-  email String @unique
-  hireDate DateTime ?
-  position String 
-  createdAt DateTime ?
-  updatedAt DateTime @updatedAt 
-  attendances Attendance[] 
-  salaries Salary[]
+model EmployeeIdTracker {
+  id              Int      @id @default(autoincrement())
+  last_used_number Int      @default(0)
+}
+model Employee {
+  employee_id  String   @id
+  firstname    String?
+  lastname     String?
+  dob          DateTime?
+  gender       String?
+  address      String?
+  phone        String?
+  email        String   @unique
+  hireDate     DateTime?
+  position     String
+  createdAt    DateTime? @default(now())
+  updatedAt    DateTime? @updatedAt
+  attendances  Attendance[]
+  salaries     Salary[]
   employee_Projects employeeProjects[]
 }
 
 model Attendance{
   attendance_id Int @id @default(autoincrement())
-  employee_id Int 
+  employee_id String
   date DateTime
   checkin_Time DateTime
   checkout_Time DateTime ?
@@ -68,7 +72,7 @@ model leaveRequests{
 
 model Salary{
   salary_id Int @id @default(autoincrement())
-  employee_id Int
+  employee_id String
   amount Float
   start_Date DateTime
   end_Date DateTime
@@ -91,7 +95,7 @@ model Projects{
 
 model employeeProjects{
   employee_project_id Int @id @default(autoincrement())
-  employee_id Int
+  employee_id String
   project_id Int
   role String
   start_Date DateTime
