@@ -24,13 +24,13 @@ app.use('/qubinest',employeeRouter)
 app.use(cookieParser())
 
 // @prisma config
-async function shutdown() {
-  await prisma.$disconnect();
-  process.exit(0);
-}
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-const PORT = 3000 ;
+// async function shutdown() {
+//   await prisma.$disconnect();
+//   process.exit(0);
+// }
+// process.on('SIGINT', shutdown);
+// process.on('SIGTERM', shutdown);
+const PORT = process.env.PORT ;
 
 // @starting app
 app.get("/",(req,res)=>{
@@ -39,7 +39,7 @@ app.get("/",(req,res)=>{
 app.get("/test",(req,res)=>{
   res.send("This is a test")
 })
-app.listen(3000, () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
