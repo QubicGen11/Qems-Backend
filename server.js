@@ -1,15 +1,16 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const dotenv=require('dotenv')
-dotenv.config()
-const authRouter=require('./routes/authRouter')
-const attendanceRouter=require('./routes/attendanceRouter')
-const employeeRouter=require('./routes/employeeRouter')
-const cors=require('cors')
-const cookieParser=require('cookie-parser')
-// @initializing prisma and express app
-const prisma = new PrismaClient();
+// const { PrismaClient } = require('@prisma/client');
+// const dotenv=require('dotenv')
+// dotenv.config()
+// const authRouter=require('./routes/authRouter')
+// const attendanceRouter=require('./routes/attendanceRouter')
+// const employeeRouter=require('./routes/employeeRouter')
+// const cors=require('cors')
+// const cookieParser=require('cookie-parser')
+// // @initializing prisma and express app
+// const prisma = new PrismaClient();
 const app = express();
+const PORT = 3000
 // const corsOptions = {
 //   // origin:' http://localhost:5173',
 //   origin:' https://qubinest-frontend.vercel.app',
