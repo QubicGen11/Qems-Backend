@@ -40,20 +40,27 @@ model Employee {
   email        String   @unique
   hireDate     DateTime?
   position     String
+  linkedin     String?
+  about        String?
   createdAt    DateTime? @default(now())
   updatedAt    DateTime? @updatedAt
   attendances  Attendance[]
   salaries     Salary[]
   employee_Projects employeeProjects[]
 }
-
 model Attendance{
   attendance_id Int @id @default(autoincrement())
   employee_id String
   date DateTime
   checkin_Time DateTime
   checkout_Time DateTime ?
-  status String 
+  skills String ?
+  linkedin String ?
+  position String ?
+  education String ?
+  about String ?
+  status String ?
+  company String ?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   employee  Employee @relation(fields: [employee_id] ,references: [employee_id])

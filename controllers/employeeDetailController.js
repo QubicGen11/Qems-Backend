@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
     const lastEmployee = await prisma.employee.findFirst({
@@ -17,85 +18,103 @@ const generateEmployeeId = async () => {
     return `${prefix}${newIdNumber.toString().padStart(3, '0')}`;
 };
 
-
 const createEmployee = async (req, res) => {
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
+
     try {
-        const employeeData = req.body;
-
-        // Check if employee_id is provided, otherwise generate one
-        if (!employeeData.employee_id) {
-            employeeData.employee_id = await generateEmployeeId();
-        }
-
-        // Create the new employee
+        const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
-            data: employeeData,
+            data: {
+                employee_id: employeeId,
+                firstname: firstname || null,
+                lastname: lastname || null,
+                dob: dob ? new Date(dob) : null,
+                gender: gender || null,
+                address: address || null,
+                phone: phone || null,
+                email: email,
+                position: position,
+                linkedin: linkedin || null,
+                about: about || null,
+                hireDate: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
         });
-
-        return res.status(201).json({ message: 'Employee created successfully', employee });
+        res.status(201).json(employee);
     } catch (error) {
         console.error('Error creating employee:', error);
-        return res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 const getEmployeeById = async (req, res) => {
+    const { id } = req.params;
+
     try {
-        const { id } = req.params;
         const employee = await prisma.employee.findUnique({
-            where: {
-                employee_id: id // No need to parse UUID
-            }
+            where: { employee_id: id }
         });
-        if (!employee) {
-            return res.status(404).send('Employee not found');
+        if (employee) {
+            res.status(200).json(employee);
+        } else {
+            res.status(404).json({ error: 'Employee not found' });
         }
-        return res.status(200).json(employee);
     } catch (error) {
         console.error('Error fetching employee:', error);
-        return res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 const getAllEmployees = async (req, res) => {
     try {
         const employees = await prisma.employee.findMany();
-        return res.status(200).json(employees);
+        res.status(200).json(employees);
     } catch (error) {
         console.error('Error fetching employees:', error);
-        return res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 const updateEmployee = async (req, res) => {
+    const { id } = req.params;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
+
     try {
-        const { id } = req.params;
-        const employeeData = req.body;
         const employee = await prisma.employee.update({
-            where: {
-                employee_id: id // No need to parse UUID
-            },
-            data: employeeData
+            where: { employee_id: id },
+            data: {
+                firstname: firstname || null,
+                lastname: lastname || null,
+                dob: dob ? new Date(dob) : null,
+                gender: gender || null,
+                address: address || null,
+                phone: phone || null,
+                email: email,
+                position: position,
+                linkedin: linkedin || null,
+                about: about || null,
+                updatedAt: new Date()
+            }
         });
-        return res.status(200).json({ message: 'Employee updated successfully', employee });
+        res.status(200).json(employee);
     } catch (error) {
         console.error('Error updating employee:', error);
-        return res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 const deleteEmployee = async (req, res) => {
+    const { id } = req.params;
+
     try {
-        const { id } = req.params;
         await prisma.employee.delete({
-            where: {
-                employee_id: id // No need to parse UUID
-            }
+            where: { employee_id: id }
         });
-        return res.status(200).send('Employee deleted successfully');
+        res.status(204).send('succesfully deleted employee');
     } catch (error) {
         console.error('Error deleting employee:', error);
-        return res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
