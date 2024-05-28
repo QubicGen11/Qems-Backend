@@ -36,6 +36,9 @@ const PORT = process.env.PORT ;
 app.get('/',(req,res)=>{
 res.send("Api is working fine")
 })
+app.get('/test',(req,res)=>{
+res.send("Api is working fine,This is a test")
+})
 // @starting app
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
