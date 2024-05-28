@@ -20,17 +20,17 @@ const PORT = 3000
 // app.use(cors(corsOptions))
 app.use(express.json())
 app.use('/qubinest',authRouter)
-app.use('/qubinest',attendanceRouter)
-app.use('/qubinest',employeeRouter)
-app.use(cookieParser())
+// app.use('/qubinest',attendanceRouter)
+// app.use('/qubinest',employeeRouter)
+// app.use(cookieParser())
 
-// @prisma config
-async function shutdown() {
-  await prisma.$disconnect();
-  process.exit(0);
-}
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+// // @prisma config
+// async function shutdown() {
+//   await prisma.$disconnect();
+//   process.exit(0);
+// }
+// process.on('SIGINT', shutdown);
+// process.on('SIGTERM', shutdown);
 // const PORT = process.env.PORT ;
 
 // @starting app
