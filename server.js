@@ -29,16 +29,10 @@ app.use('/qubinest', employeeRouter);
 app.get('/', (req, res) => {
   res.send("API is working fine");
 });
-
-app.get('/test', (req, res) => {
-  try {
-    // Your code logic here
-    res.send("API is working fine, this is a test");
-  } catch (error) {
-    console.error("Failed to process request:", error);
-    res.status(500).send("Internal Server Error");
-  }
+app.get('/', (req, res) => {
+  res.send("API is working fine");
 });
+
 
 
 // Export the app for serverless functionality
