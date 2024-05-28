@@ -32,6 +32,10 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 const PORT = process.env.PORT ;
 
+
+app.get('/',(req,res)=>{
+res.send("Api is working fine")
+})
 // @starting app
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
