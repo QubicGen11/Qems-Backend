@@ -31,8 +31,15 @@ app.get('/', (req, res) => {
 });
 
 app.get('/test', (req, res) => {
-  res.send("API is working fine, this is a test");
+  try {
+    // Your code logic here
+    res.send("API is working fine, this is a test");
+  } catch (error) {
+    console.error("Failed to process request:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
+
 
 // Export the app for serverless functionality
 module.exports = app;
