@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
   origin: 'https://qubinest-frontend.vercel.app',
+  // origin: 'http://localhost:3000',
   credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
