@@ -19,7 +19,7 @@ const PORT = 3000
 // // //@middlewares
 // app.use(cors(corsOptions))
 app.use(express.json())
-// app.use('/qubinest',authRouter)
+app.use('/qubinest',authRouter)
 // app.use('/qubinest',attendanceRouter)
 // app.use('/qubinest',employeeRouter)
 // app.use(cookieParser())
