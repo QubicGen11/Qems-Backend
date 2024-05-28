@@ -11,26 +11,26 @@ const express = require('express');
 // const prisma = new PrismaClient();
 const app = express();
 const PORT = 3000
-const corsOptions = {
-  // origin:' http://localhost:5173',
-  origin:' https://qubinest-frontend.vercel.app',
-  credentials: true, // This is required to allow credentials (cookies, headers)
-};
-// //@middlewares
-app.use(cors(corsOptions))
-// app.use(express.json())
-// app.use('/qubinest',authRouter)
-// app.use('/qubinest',attendanceRouter)
-// app.use('/qubinest',employeeRouter)
-// app.use(cookieParser())
+// const corsOptions = {
+//   // origin:' http://localhost:5173',
+//   origin:' https://qubinest-frontend.vercel.app',
+//   credentials: true, // This is required to allow credentials (cookies, headers)
+// };
+// // //@middlewares
+// app.use(cors(corsOptions))
+app.use(express.json())
+app.use('/qubinest',authRouter)
+app.use('/qubinest',attendanceRouter)
+app.use('/qubinest',employeeRouter)
+app.use(cookieParser())
 
-// // @prisma config
-// async function shutdown() {
-//   await prisma.$disconnect();
-//   process.exit(0);
-// }
-// process.on('SIGINT', shutdown);
-// process.on('SIGTERM', shutdown);
+// @prisma config
+async function shutdown() {
+  await prisma.$disconnect();
+  process.exit(0);
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 // const PORT = process.env.PORT ;
 
 // @starting app
