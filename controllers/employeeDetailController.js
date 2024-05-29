@@ -6,7 +6,6 @@ const generateEmployeeId = async () => {
     const lastEmployee = await prisma.employee.findFirst({
         orderBy: { employee_id: 'desc' },
     });
-
     let newIdNumber;
     if (lastEmployee) {
         const lastIdNumber = parseInt(lastEmployee.employee_id.slice(prefix.length));
@@ -20,7 +19,7 @@ const generateEmployeeId = async () => {
 
 const createEmployee = async (req, res) => {
     const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
-
+    const userData=req.cookies.email
     try {
         const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
@@ -106,12 +105,11 @@ const updateEmployee = async (req, res) => {
 
 const deleteEmployee = async (req, res) => {
     const { id } = req.params;
-
     try {
         await prisma.employee.delete({
             where: { employee_id: id }
         });
-        res.status(204).send('succesfully deleted employee');
+        res.status(204).send('Successfully deleted employee');
     } catch (error) {
         console.error('Error deleting employee:', error);
         res.status(500).json({ error: 'Internal server error' });
