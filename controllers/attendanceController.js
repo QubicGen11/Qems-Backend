@@ -16,10 +16,10 @@ const clockIn = async (req, res) => {
             data: {
                 employee_id: user.employeeId,
                 checkin_Time: new Date(),
-                companyEmail: email
+                companyEmail: email,
+                status:'pending'
             }
         });
-
         console.log('Clock-in successful:', attendance);
         return res.status(200).json({ message: 'Clock-in successful', attendance });
     } catch (error) {
@@ -27,7 +27,6 @@ const clockIn = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-
 const clockOut = async (req, res) => {
     try {
         const { email } = req.body;
@@ -38,7 +37,6 @@ const clockOut = async (req, res) => {
             console.log('User not found.');
             return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
         }
-
         const latestAttendance = await prisma.attendance.findFirst({
             where: {
                 companyEmail: email,
@@ -48,12 +46,10 @@ const clockOut = async (req, res) => {
                 checkin_Time: 'desc'
             }
         });
-
         if (!latestAttendance) {
             console.log('No active clock-in record found for this user.');
             return res.status(400).json({ message: 'No active clock-in record found for this user.' });
         }
-
         const attendance = await prisma.attendance.update({
             where: {
                 id: latestAttendance.id
@@ -62,7 +58,6 @@ const clockOut = async (req, res) => {
                 checkout_Time: new Date()
             }
         });
-
         console.log('Clock-out successful:', attendance);
         return res.status(200).json({ message: 'Clock-out successful', attendance });
     } catch (error) {
@@ -70,5 +65,4 @@ const clockOut = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-
 module.exports = { clockIn, clockOut };
