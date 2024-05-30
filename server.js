@@ -3,10 +3,11 @@ const { PrismaClient } = require('@prisma/client');
 const dotenv=require('dotenv')
 dotenv.config()
 const authRouter=require('./routes/authRouter')
-const attendanceRouter=require('./routes/attendanceRouter')
+const attendanceRoute=require('./routes/attendanceRouter')
 const employeeRouter=require('./routes/employeeRouter')
 const cors=require('cors')
-const cookieParser=require('cookie-parser')
+const cookieParser=require('cookie-parser');
+const authenticateToken = require('./middlewares/authenticateUser');
 // @initializing prisma and express app
 const prisma = new PrismaClient();
 const app = express();
@@ -17,13 +18,12 @@ const corsOptions = {
   credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
-
 //@middlewares
 app.use(cors(corsOptions))
 app.use(express.json())
 app.use('/qubinest',authRouter)
-app.use('/qubinest',attendanceRouter)
-app.use('/qubinest',employeeRouter)
+app.use('/qubinest',attendanceRoute)
+app.use('/qubinest', employeeRouter)
 app.use(cookieParser())
 
 // @prisma config

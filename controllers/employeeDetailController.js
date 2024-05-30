@@ -1,11 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
     const lastEmployee = await prisma.employee.findFirst({
         orderBy: { employee_id: 'desc' },
     });
+
     let newIdNumber;
     if (lastEmployee) {
         const lastIdNumber = parseInt(lastEmployee.employee_id.slice(prefix.length));
@@ -18,8 +18,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
-    const userData=req.cookies.email
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about,companyEmail } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
@@ -35,12 +34,23 @@ const createEmployee = async (req, res) => {
                 position: position,
                 linkedin: linkedin || null,
                 about: about || null,
+                companyEmail:companyEmail,
                 hireDate: new Date(),
                 createdAt: new Date(),
                 updatedAt: new Date()
             }
         });
         res.status(201).json(employee);
+        if(companyEmail){
+            await prisma.user.update({
+                where:{
+                    email:companyEmail
+                },
+                data:{
+                    employeeId:employeeId,
+                }
+            })
+        }
     } catch (error) {
         console.error('Error creating employee:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -49,7 +59,6 @@ const createEmployee = async (req, res) => {
 
 const getEmployeeById = async (req, res) => {
     const { id } = req.params;
-
     try {
         const employee = await prisma.employee.findUnique({
             where: { employee_id: id }
@@ -109,11 +118,10 @@ const deleteEmployee = async (req, res) => {
         await prisma.employee.delete({
             where: { employee_id: id }
         });
-        res.status(204).send('Successfully deleted employee');
+        res.status(204).send('succesfully deleted employee');
     } catch (error) {
         console.error('Error deleting employee:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee };

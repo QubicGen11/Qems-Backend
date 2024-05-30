@@ -1,7 +1,6 @@
 const express=require('express')
+const { clockIn,clockOut} = require('../controllers/attendanceController')
 const router=express.Router()
-const {userClockin,userClockout}=require('../controllers/attendanceController')
-router.post('/clockin',userClockin)
-router.post('/clockout',userClockout)
-
+router.post('/clockin',clockIn)
+router.post('/clockout',clockOut)
 module.exports=router

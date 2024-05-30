@@ -1,20 +1,18 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
 const jwtSecret = process.env.jwtSecret;
-const authenticateUser = (req, res, next) => {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).send('User is not authenticated');
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (token == null) {
+    return res.sendStatus(401); // Unauthorized
+  }
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) {
+      return res.sendStatus(403); // Forbidden
     }
-  
-    try {
-      const decoded = jwt.verify(token, jwtSecret);
-      req.user = decoded; // Add decoded user info to request
-      next();
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      return res.status(401).send('Invalid token');
-    }
-  };
-module.exports=authenticateUser
+    req.user = user; // Attach the decoded user information to the request object
+    next();
+  });
+};
+
+module.exports = authenticateToken;
