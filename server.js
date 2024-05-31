@@ -13,8 +13,8 @@ const prisma = new PrismaClient();
 const app = express();
 
 const corsOptions = {
-  origin:' http://localhost:5173',
-  // origin:' https://qubinest-frontend.vercel.app',
+  // origin:' http://localhost:5173',
+  origin:' https://qubinest-frontend.vercel.app',
   credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
@@ -39,6 +39,7 @@ const PORT = process.env.PORT ;
 app.get("/",(req,res)=>{
   res.send("Api is working fine")
 })
+
 app.get("/test",(req,res)=>{
   res.send("This is a test")
 })
