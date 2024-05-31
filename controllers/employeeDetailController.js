@@ -124,4 +124,22 @@ const deleteEmployee = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee };
+const fetchEmployeeDetails = async (req, res) => {
+    const { email } = req.body; // Destructure email from the request body
+    try {
+        const getData = await prisma.employee.findFirst({
+            where: { companyEmail: email } // Properly specify the condition in the query
+        });
+        if (!getData) {
+            return res.status(400).send('Employee data is not available');
+        }
+        return res.status(200).json(getData); // Use json to send the response
+    } catch (error) {
+        return res.status(500).send('Internal server error: ' + error.message);
+    }
+};
+
+module.exports = fetchEmployeeDetails; // Ensure the function is exported
+
+
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee,fetchEmployeeDetails };
