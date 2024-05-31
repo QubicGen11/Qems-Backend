@@ -125,7 +125,7 @@ const deleteEmployee = async (req, res) => {
     }
 };
 const fetchEmployeeDetails = async (req, res) => {
-    const { email } = req.body; // Destructure email from the request body
+    const { email } = req.params; // Destructure email from the request body
     try {
         const getData = await prisma.employee.findFirst({
             where: { companyEmail: email } // Properly specify the condition in the query

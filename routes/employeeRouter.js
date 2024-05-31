@@ -3,7 +3,7 @@ const router = express.Router();
 const { createEmployee, getAllEmployees, getEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeDetails } = require('../controllers/employeeDetailController');
 
 router.post('/employees', createEmployee);
-router.post('/getemployees', fetchEmployeeDetails);
+router.get('/getemployees/:email', fetchEmployeeDetails);
 router.get('/employees', getAllEmployees);
 router.get('/employees/:id', getEmployeeById);
 router.put('/employees/:id', updateEmployee);
