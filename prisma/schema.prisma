@@ -52,7 +52,7 @@ model Employee {
 }
 model Attendance{
   id Int @id @default(autoincrement())
-  employeeId String ?
+  employeeId String 
   date DateTime @default(now())
   status String ?
   checkin_Time DateTime ?
