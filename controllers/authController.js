@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
 const bcrypt=require('bcrypt')
 const jwt=require('jsonwebtoken')
 const jwtSecret=process.env.jwtSecret
@@ -18,10 +17,11 @@ const registerUser = async (req, res) => {
       }
       const newUser = await prisma.user.create({
           data: {
+             employeeId:'',
               username: username,
               email: email,
               password: hashedPassword,
-              role: role // Changed 'position' to 'role'
+              role: role // Changed 'position' to 'role',
           }
       });
       res.status(200).json(newUser);
@@ -30,7 +30,6 @@ const registerUser = async (req, res) => {
       res.status(500).send('Internal server error');
   }
 };
-
 const loginUser = async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -51,7 +50,7 @@ const loginUser = async (req, res) => {
       if (!isMatch) {
         return res.status(400).send('Please provide valid username and password');
       }
-  
+
       //  @If password matches, generate a JWT token
       const jwtToken = jwt.sign({ id: existingUser.id, email: existingUser.email }, jwtSecret, {
         expiresIn: '2h',
@@ -82,4 +81,16 @@ const loginUser = async (req, res) => {
       return res.status(500).send('Server error');
     }
   };
+  const resetPassword=async(req,res)=>{
+    const {password,confirmPassword,email}=req.body
+    try {
+      const user=await prisma.user.findFirst({email:email})
+      if(!user){
+        return res.tatus(400).send('user not found')
+        
+      }
+    } catch (error) {
+      
+    }
+  }
 module.exports = {registerUser,loginUser,logoutUser} ;

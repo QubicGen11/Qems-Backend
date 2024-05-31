@@ -14,12 +14,13 @@ const clockIn = async (req, res) => {
 
         const attendance = await prisma.attendance.create({
             data: {
-                employee_id: user.employeeId,
+                employeeId: user.employeeId,
                 checkin_Time: new Date(),
                 companyEmail: email,
                 status:'pending'
             }
         });
+
         console.log('Clock-in successful:', attendance);
         return res.status(200).json({ message: 'Clock-in successful', attendance });
     } catch (error) {
@@ -27,6 +28,7 @@ const clockIn = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
 const clockOut = async (req, res) => {
     try {
         const { email } = req.body;
@@ -37,6 +39,7 @@ const clockOut = async (req, res) => {
             console.log('User not found.');
             return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
         }
+
         const latestAttendance = await prisma.attendance.findFirst({
             where: {
                 companyEmail: email,
@@ -46,10 +49,12 @@ const clockOut = async (req, res) => {
                 checkin_Time: 'desc'
             }
         });
+
         if (!latestAttendance) {
             console.log('No active clock-in record found for this user.');
             return res.status(400).json({ message: 'No active clock-in record found for this user.' });
         }
+
         const attendance = await prisma.attendance.update({
             where: {
                 id: latestAttendance.id
@@ -58,6 +63,7 @@ const clockOut = async (req, res) => {
                 checkout_Time: new Date()
             }
         });
+
         console.log('Clock-out successful:', attendance);
         return res.status(200).json({ message: 'Clock-out successful', attendance });
     } catch (error) {
@@ -65,4 +71,11 @@ const clockOut = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+const changePassword=async(req,res)=>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}
 module.exports = { clockIn, clockOut };

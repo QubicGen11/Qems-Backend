@@ -16,8 +16,8 @@ datasource db {
 //   url      = env("DATABASE_URL")
 // }
 model User{
-  employeeId String ?
-  employee Employee ? @relation(fields: [employeeId],references: [employee_id])
+  employeeId String 
+  employee Employee  @relation(fields: [employeeId],references: [employee_id])
   username String ?
   email String @id
   password String 
@@ -37,7 +37,7 @@ model Employee {
   gender       String?
   address      String?
   phone        String?
-  email        String   @unique
+  email        String ?  
   companyEmail String ?
   hireDate     DateTime?
   position     String
@@ -52,15 +52,15 @@ model Employee {
 }
 model Attendance{
   id Int @id @default(autoincrement())
-  employee_id String 
+  employeeId String 
   date DateTime @default(now())
+  status String ?
   checkin_Time DateTime ?
   checkout_Time DateTime ?
   companyEmail String 
-  status String ?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  employee  Employee ? @relation(fields: [employee_id] ,references: [employee_id]) 
+  employee  Employee   @relation(fields: [employeeId] ,references: [employee_id]) 
 }
 model leaveRequests{
   leave_id Int @id @default(autoincrement())
