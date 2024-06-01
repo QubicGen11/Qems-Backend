@@ -15,19 +15,19 @@ datasource db {
 //   provider = "postgresql"
 //   url      = env("DATABASE_URL")
 // }
-model User{
-  employeeId String ?
-  employee Employee ?  @relation(fields: [employeeId],references: [employee_id])
-  username String ?
+model User {
+  employeeId String?
+  employee Employee? @relation(fields: [employeeId], references: [employee_id])
+  username String?
   email String @id
   password String 
-  role String ?
+  role String?
   status Status @default(Active)
   createdAt DateTime @default(now()) 
 }
 model EmployeeIdTracker {
-  id              Int      @id @default(autoincrement())
-  last_used_number Int      @default(0)
+  id              Int  @id @default(autoincrement())
+  last_used_number Int @default(0)
 }
 model Employee {
   employee_id  String   @id
@@ -38,12 +38,12 @@ model Employee {
   gender       String?
   address      String?
   phone        String?
-  email        String ?  
-  companyEmail String ?
+  email        String?  
+  companyEmail String?
   hireDate     DateTime?
-  position     String ?
-  education String?
-  skills String?
+  position     String?
+  skills       String?
+  eductaion    String?
   linkedin     String?
   about        String?
   createdAt    DateTime? @default(now())
@@ -53,19 +53,19 @@ model Employee {
   employee_Projects employeeProjects[]
   users User[]
 }
-model Attendance{
+model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
   date DateTime @default(now())
-  status String ?
-  checkin_Time DateTime ?
-  checkout_Time DateTime ?
+  status String?
+  checkin_Time DateTime?
+  checkout_Time DateTime?
   companyEmail String 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  employee  Employee ?  @relation(fields: [employeeId] ,references: [employee_id]) 
+  employee Employee? @relation(fields: [employeeId], references: [employee_id]) 
 }
-model leaveRequests{
+model leaveRequests {
   leave_id Int @id @default(autoincrement())
   employee_id Int
   leaveType String
@@ -76,7 +76,7 @@ model leaveRequests{
   updatedAt DateTime @updatedAt
 }
 
-model Salary{
+model Salary {
   salary_id Int @id @default(autoincrement())
   employee_id String
   amount Float
@@ -84,10 +84,10 @@ model Salary{
   end_Date DateTime
   createdAt DateTime
   updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employee_id],references: [employee_id])
+  employee Employee @relation(fields: [employee_id], references: [employee_id])
 }
 
-model Projects{
+model Projects {
   project_id Int @id @default(autoincrement())
   project_Name String
   start_Date DateTime
@@ -99,7 +99,7 @@ model Projects{
   employeeProjects employeeProjects[]
 }
 
-model employeeProjects{
+model employeeProjects {
   employee_project_id Int @id @default(autoincrement())
   employee_id String
   project_id Int
@@ -108,18 +108,18 @@ model employeeProjects{
   end_Date DateTime 
   createdAt DateTime
   updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employee_id],references: [employee_id])
-  project Projects @relation(fields: [project_id],references: [project_id])
+  employee Employee @relation(fields: [employee_id], references: [employee_id])
+  project Projects @relation(fields: [project_id], references: [project_id])
 }
 
 //enums
-enum Role{
+enum Role {
   Employee
   Admin
   Intern 
   Manager
 }
-enum Status{
+enum Status {
   Active
   Disabled
 }

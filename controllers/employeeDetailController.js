@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
     const lastEmployee = await prisma.employee.findFirst({
@@ -18,7 +19,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin,education,skills, about,companyEmail } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, education, skills, about, companyEmail } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
@@ -32,26 +33,26 @@ const createEmployee = async (req, res) => {
                 phone: phone || null,
                 email: email,
                 position: position,
-                education:education,
-                skills:skills,
+                education: education,
+                skills: skills,
                 linkedin: linkedin || null,
                 about: about || null,
-                companyEmail:companyEmail,
+                companyEmail: companyEmail,
                 hireDate: new Date(),
                 createdAt: new Date(),
                 updatedAt: new Date()
             }
         });
         res.status(201).json(employee);
-        if(companyEmail){
+        if (companyEmail) {
             await prisma.user.update({
-                where:{
-                    email:companyEmail
+                where: {
+                    email: companyEmail
                 },
-                data:{
-                    employeeId:employeeId,
+                data: {
+                    employeeId: employeeId,
                 }
-            })
+            });
         }
     } catch (error) {
         console.error('Error creating employee:', error);
@@ -120,12 +121,13 @@ const deleteEmployee = async (req, res) => {
         await prisma.employee.delete({
             where: { employee_id: id }
         });
-        res.status(204).send('succesfully deleted employee');
+        res.status(204).send('Successfully deleted employee');
     } catch (error) {
         console.error('Error deleting employee:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 const fetchEmployeeDetails = async (req, res) => {
     const { email } = req.params; // Destructure email from the request body
     try {
@@ -140,23 +142,23 @@ const fetchEmployeeDetails = async (req, res) => {
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
- const employeeImgUpload=async(req,res)=>{
-    const companyEmail=req.body
-        const employeeImg=req.file.filename
-    try {   
-        await prisma.employee.update({
-            where:{
-                companyEmail:companyEmail
-            },
-            data:{
-                employeeImg:employeeImg
-            }
-        })
-        return res.status(200).send('image upload succesful')
-    } catch (error) {
-            return res.status(500).send('internal error'+error.message)
-    }
- }
 
-module.exports = fetchEmployeeDetails; // Ensure the function is exported
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee,fetchEmployeeDetails,employeeImgUpload };
+const employeeImgUpload = async (req, res) => {
+    const { companyEmail } = req.body;
+    const employeeImg = req.file.filename;
+    try {
+        await prisma.employee.update({
+            where: {
+                companyEmail: companyEmail
+            },
+            data: {
+                employeeImg: employeeImg
+            }
+        });
+        return res.status(200).send('Image upload successful');
+    } catch (error) {
+        return res.status(500).send('Internal error: ' + error.message);
+    }
+};
+
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, employeeImgUpload };
