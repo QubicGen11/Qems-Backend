@@ -18,7 +18,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about,companyEmail } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about,companyEmail , education } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
@@ -87,7 +87,7 @@ const getAllEmployees = async (req, res) => {
 
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about , education } = req.body;
 
     try {
         const employee = await prisma.employee.update({
@@ -101,6 +101,7 @@ const updateEmployee = async (req, res) => {
                 phone: phone || null,
                 email: email,
                 position: position,
+                education: education,
                 linkedin: linkedin || null,
                 about: about || null,
                 updatedAt: new Date()
