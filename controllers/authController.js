@@ -5,6 +5,7 @@ const jwt=require('jsonwebtoken')
 const jwtSecret=process.env.jwtSecret
 const registerUser = async (req, res) => {
   try {
+<<<<<<< HEAD
       const { username, email, password, role } = req.body;
       const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -34,6 +35,35 @@ const registerUser = async (req, res) => {
   }
 };
 
+=======
+    const { username, email, password, role } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: email
+      }
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' }); // Ensure JSON format for consistency
+    }
+    const newUser = await prisma.user.create({
+      data: {
+        username: username,
+        email: email,
+        password: hashedPassword,
+        role: role
+      }
+    });
+    res.status(201).json(newUser); // Use 201 for created
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).send('Internal server error');
+  }
+};
+
+
+
+>>>>>>> fa55b6dcc243c0b398cb9907f397037c3410f822
 const loginUser = async (req, res) => {
     try {
       const { email, password } = req.body;
