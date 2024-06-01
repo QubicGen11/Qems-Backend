@@ -18,7 +18,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about,companyEmail } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin,education,skills, about,companyEmail } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const employee = await prisma.employee.create({
@@ -32,6 +32,8 @@ const createEmployee = async (req, res) => {
                 phone: phone || null,
                 email: email,
                 position: position,
+                education:education,
+                skills:skills,
                 linkedin: linkedin || null,
                 about: about || null,
                 companyEmail:companyEmail,
@@ -138,9 +140,23 @@ const fetchEmployeeDetails = async (req, res) => {
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
-
+ const employeeImgUpload=async(req,res)=>{
+    const companyEmail=req.body
+        const employeeImg=req.file.filename
+    try {   
+        await prisma.employee.update({
+            where:{
+                companyEmail:companyEmail
+            },
+            data:{
+                employeeImg:employeeImg
+            }
+        })
+        return res.status(200).send('image upload succesful')
+    } catch (error) {
+            return res.status(500).send('internal error'+error.message)
+    }
+ }
 
 module.exports = fetchEmployeeDetails; // Ensure the function is exported
-
-
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee,fetchEmployeeDetails };
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee,fetchEmployeeDetails,employeeImgUpload };

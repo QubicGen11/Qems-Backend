@@ -31,6 +31,7 @@ model EmployeeIdTracker {
 }
 model Employee {
   employee_id  String   @id
+  employeeImg String?
   firstname    String?
   lastname     String?
   dob          DateTime?
@@ -41,6 +42,8 @@ model Employee {
   companyEmail String ?
   hireDate     DateTime?
   position     String ?
+  education String?
+  skills String?
   linkedin     String?
   about        String?
   createdAt    DateTime? @default(now())
