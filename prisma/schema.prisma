@@ -41,6 +41,7 @@ model Employee {
   companyEmail String ?
   hireDate     DateTime?
   position     String ?
+  eductaion    String?
   linkedin     String?
   about        String?
   createdAt    DateTime? @default(now())

@@ -31,6 +31,7 @@ const createEmployee = async (req, res) => {
                 address: address || null,
                 phone: phone || null,
                 email: email,
+                education:education,
                 position: position,
                 linkedin: linkedin || null,
                 about: about || null,
