@@ -133,11 +133,12 @@ const fetchEmployeeDetails = async (req, res) => {
         if (!getData) {
             return res.status(400).send('Employee data is not available');
         }
-        return res.status(200).json(getData); // Use json to send the response
+        return res.status(200).json([getData]); // Wrap the response in an array
     } catch (error) {
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
+
 
 module.exports = fetchEmployeeDetails; // Ensure the function is exported
 
