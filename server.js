@@ -10,6 +10,7 @@ const cors=require('cors')
 const morgan=require('morgan')
 const cookieParser=require('cookie-parser');
 const multer=require('multer')
+const path=require('path')
 const authenticateToken = require('./middlewares/authenticateUser');
 // @initializing prisma and express app
 const prisma = new PrismaClient();
@@ -21,6 +22,18 @@ const corsOptions = {
   credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
+// @multer setup
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Uploads directory
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
+
 //@middlewares
 app.use(cors(corsOptions))
 app.use(express.json())
@@ -29,6 +42,8 @@ app.use('/qubinest',attendanceRoute)
 app.use('/qubinest', employeeRouter)
 app.use(cookieParser())
  app.use('/qubinest',reportRouter)
+ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+ 
 // @prisma config
 async function shutdown() {
   await prisma.$disconnect();

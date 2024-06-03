@@ -1,6 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const multer=require('multer')
+// @multer
+// Set up storage engine for Multer
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/'); // Uploads directory
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
+    }
+  });
+  const upload = multer({ storage: storage });
 
+  
+  
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
     const lastEmployee = await prisma.employee.findFirst({
@@ -141,22 +156,38 @@ const fetchEmployeeDetails = async (req, res) => {
     }
 };
 
-const employeeImgUpload = async (req, res) => {
-    const { companyEmail } = req.body;
-    const employeeImg = req.file.filename;
-    try {
-        await prisma.employee.update({
-            where: {
-                companyEmail: companyEmail
-            },
-            data: {
-                employeeImg: employeeImg
-            }
-        });
-        return res.status(200).send('Image upload successful');
-    } catch (error) {
-        return res.status(500).send('Internal error: ' + error.message);
-    }
-};
 
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, employeeImgUpload };
+const uploadEmployeeFile = async (req, res) => {
+    const { email } = req.body;
+    const file = req.file;
+  
+    if (!email || !file) {
+      return res.status(400).send('Email and file are required.');
+    }
+  
+    try {
+      const existingEmployee = await prisma.employee.findFirst({
+        where: { companyEmail: email },
+      });
+  
+      if (!existingEmployee) {
+        return res.status(400).send('Employee not found.');
+      }
+  
+      const updatedEmployee = await prisma.employee.update({
+        where: { employee_id: existingEmployee.employee_id }, // Use employee_id as the unique identifier
+        data: {
+          employeeImg: file.path, // Assuming you have a filePath field in the employee table
+          // Add other necessary fields if needed
+        },
+      });
+  
+      res.status(200).json({ message: 'File uploaded successfully', updatedEmployee });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      res.status(500).send('Internal server error');
+    }
+  };
+  
+  const uploadFile = upload.single('file');
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails,uploadEmployeeFile,uploadFile };
