@@ -6,7 +6,6 @@ const generateEmployeeId = async () => {
     const lastEmployee = await prisma.employee.findFirst({
         orderBy: { employee_id: 'desc' },
     });
-
     let newIdNumber;
     if (lastEmployee) {
         const lastIdNumber = parseInt(lastEmployee.employee_id.slice(prefix.length));
@@ -59,7 +58,6 @@ const createEmployee = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const getEmployeeById = async (req, res) => {
     const { id } = req.params;
     try {

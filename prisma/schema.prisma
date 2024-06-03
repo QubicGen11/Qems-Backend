@@ -43,13 +43,14 @@ model Employee {
   hireDate     DateTime?
   position     String?
   skills       String?
-  eductaion    String?
+  education    String?
   linkedin     String?
   about        String?
   createdAt    DateTime? @default(now())
   updatedAt    DateTime? @updatedAt
   attendances  Attendance[]
   salaries     Salary[]
+  reports employeeReports[]
   employee_Projects employeeProjects[]
   users User[]
 }
@@ -58,6 +59,7 @@ model Attendance {
   employeeId String 
   date DateTime @default(now())
   status String?
+  reports String?
   checkin_Time DateTime?
   checkout_Time DateTime?
   companyEmail String 
@@ -99,6 +101,15 @@ model Projects {
   employeeProjects employeeProjects[]
 }
 
+model employeeReports{
+  id Int @id @default(autoincrement())
+  employeeId String ?
+  employeeEmail String ?
+  report String
+  employee Employee?@relation(fields: [employeeId],references: [employee_id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 model employeeProjects {
   employee_project_id Int @id @default(autoincrement())
   employee_id String

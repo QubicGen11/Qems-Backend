@@ -5,6 +5,7 @@ dotenv.config()
 const authRouter=require('./routes/authRouter')
 const attendanceRoute=require('./routes/attendanceRouter')
 const employeeRouter=require('./routes/employeeRouter')
+const reportRouter=require('./routes/reportRouter')
 const cors=require('cors')
 const morgan=require('morgan')
 const cookieParser=require('cookie-parser');
@@ -27,7 +28,7 @@ app.use('/qubinest',authRouter)
 app.use('/qubinest',attendanceRoute)
 app.use('/qubinest', employeeRouter)
 app.use(cookieParser())
- 
+ app.use('/qubinest',reportRouter)
 // @prisma config
 async function shutdown() {
   await prisma.$disconnect();

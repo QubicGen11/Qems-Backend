@@ -78,4 +78,30 @@ const changePassword=async(req,res)=>{
         
     }
 }
-module.exports = { clockIn, clockOut };
+const getAttendance = async (req, res) => {
+    const { email } = req.params;
+    try {
+      const findEmployee = await prisma.employee.findFirst({
+        where: {
+          companyEmail: email,
+        },
+      });
+  
+      if (!findEmployee) {
+        return res.status(400).send('Employee is not there');
+      }
+  
+      const attendanceData = await prisma.attendance.findMany({
+        where: {
+          companyEmail: email,
+        },
+      });
+  
+      return res.status(200).json(attendanceData);
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+      return res.status(500).send('Server error');
+    }
+  };
+  
+module.exports = { clockIn, clockOut,getAttendance };
