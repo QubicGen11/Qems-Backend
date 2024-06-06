@@ -83,7 +83,6 @@ model employeeLeaves{
   leaveType String 
   startDate DateTime
   endDate DateTime
-  
 }
 model Salary {
   salary_id Int @id @default(autoincrement())
