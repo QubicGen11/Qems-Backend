@@ -71,13 +71,6 @@ const clockOut = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-const changePassword=async(req,res)=>{
-    try {
-        
-    } catch (error) {
-        
-    }
-}
 const getAttendance = async (req, res) => {
     const { email } = req.params;
     try {

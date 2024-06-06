@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const multer=require('multer')
-// @multer
 // Set up storage engine for Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -12,10 +11,7 @@ const storage = multer.diskStorage({
       cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
     }
   });
-  const upload = multer({ storage: storage });
-
-  
-  
+const upload = multer({ storage: storage });  
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
     const lastEmployee = await prisma.employee.findFirst({
@@ -28,10 +24,8 @@ const generateEmployeeId = async () => {
     } else {
         newIdNumber = 1;
     }
-
     return `${prefix}${newIdNumber.toString().padStart(3, '0')}`;
 };
-
 const createEmployee = async (req, res) => {
     const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, education, skills, about, companyEmail } = req.body;
     try {
@@ -89,7 +83,6 @@ const getEmployeeById = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const getAllEmployees = async (req, res) => {
     try {
         const employees = await prisma.employee.findMany();
@@ -99,7 +92,6 @@ const getAllEmployees = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
     const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about } = req.body;
@@ -127,7 +119,6 @@ const updateEmployee = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const deleteEmployee = async (req, res) => {
     const { id } = req.params;
     try {
@@ -140,7 +131,6 @@ const deleteEmployee = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const fetchEmployeeDetails = async (req, res) => {
     const { email } = req.params; // Destructure email from the request body
     try {
@@ -155,8 +145,6 @@ const fetchEmployeeDetails = async (req, res) => {
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
-
-
 const uploadEmployeeFile = async (req, res) => {
     const { email } = req.body;
     const file = req.file;
@@ -187,7 +175,6 @@ const uploadEmployeeFile = async (req, res) => {
       console.error('Error uploading file:', error);
       res.status(500).send('Internal server error');
     }
-  };
-  
-  const uploadFile = upload.single('file');
+  };  
+const uploadFile = upload.single('file');
 module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails,uploadEmployeeFile,uploadFile };

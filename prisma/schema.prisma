@@ -1,6 +1,5 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 generator client {
@@ -52,6 +51,7 @@ model Employee {
   salaries     Salary[]
   reports employeeReports[]
   employee_Projects employeeProjects[]
+  leaveRequests leaveRequests[]
   users User[]
 }
 model Attendance {
@@ -69,7 +69,8 @@ model Attendance {
 }
 model leaveRequests {
   leave_id Int @id @default(autoincrement())
-  employee_id Int
+  employee_id String ?
+  employee Employee ? @relation(fields: [employee_id],references: [employee_id])
   leaveType String
   start_Date DateTime
   end_Date DateTime
@@ -77,7 +78,13 @@ model leaveRequests {
   createdAt DateTime
   updatedAt DateTime @updatedAt
 }
-
+model employeeLeaves{
+  id Int @id @default(autoincrement())
+  leaveType String 
+  startDate DateTime
+  endDate DateTime
+  
+}
 model Salary {
   salary_id Int @id @default(autoincrement())
   employee_id String
@@ -88,7 +95,6 @@ model Salary {
   updatedAt DateTime @updatedAt
   employee Employee @relation(fields: [employee_id], references: [employee_id])
 }
-
 model Projects {
   project_id Int @id @default(autoincrement())
   project_Name String
@@ -100,7 +106,6 @@ model Projects {
   updatedAt DateTime @updatedAt
   employeeProjects employeeProjects[]
 }
-
 model employeeReports{
   id Int @id @default(autoincrement())
   employeeId String ?
@@ -122,7 +127,6 @@ model employeeProjects {
   employee Employee @relation(fields: [employee_id], references: [employee_id])
   project Projects @relation(fields: [project_id], references: [project_id])
 }
-
 //enums
 enum Role {
   Employee
