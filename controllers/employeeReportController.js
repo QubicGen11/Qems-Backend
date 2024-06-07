@@ -17,23 +17,14 @@ const createReport = async (req, res) => {
         return res.status(400).send('Employee not found.');
       }
   
-      const newReport = await prisma.employeeReports.create({
+      const newReport = await prisma.attendance.update({
         data: {
-          employeeEmail: email,
+          companyEmail: email,
           employeeId:existingEmployee.employee_id,
           report: reportText,
           // add other necessary fields here
         },
       });
-      const updateAttendance=await prisma.attendance.updateMany({
-        where:{
-            companyEmail:email
-        },
-        data:{
-            reports:reportText
-        }
-      })
-  
       return res.status(201).json(newReport);
     } catch (error) {
       console.error('Error creating report:', error);

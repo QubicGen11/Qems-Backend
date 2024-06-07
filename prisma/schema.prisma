@@ -80,9 +80,13 @@ model leaveRequests {
 }
 model employeeLeaves{
   id Int @id @default(autoincrement())
-  leaveType String 
-  startDate DateTime
-  endDate DateTime
+  leaveType String
+  startDate DateTime 
+  endDate DateTime ?
+  Duration String 
+  leaveDocumrnt String ?
+  Reason String
+  Comments String 
 }
 model Salary {
   salary_id Int @id @default(autoincrement())
@@ -113,6 +117,7 @@ model employeeReports{
   employee Employee?@relation(fields: [employeeId],references: [employee_id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+ 
 }
 model employeeProjects {
   employee_project_id Int @id @default(autoincrement())
