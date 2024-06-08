@@ -49,11 +49,12 @@ model Employee {
   updatedAt    DateTime? @updatedAt
   attendances  Attendance[]
   salaries     Salary[]
-  reports employeeReports[]
+  reports      employeeReports[]
   employee_Projects employeeProjects[]
   leaveRequests leaveRequests[]
-  users User[]
+  users        User[]
 }
+
 model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
