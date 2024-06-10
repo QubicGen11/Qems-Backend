@@ -1,19 +1,12 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 generator client {
   provider = "prisma-client-js"
 }
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
 }
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
 model User {
   employeeId String?
   employee Employee? @relation(fields: [employeeId], references: [employee_id])
@@ -54,7 +47,6 @@ model Employee {
   leaveRequests leaveRequests[]
   users        User[]
 }
-
 model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
@@ -118,7 +110,6 @@ model employeeReports{
   employee Employee?@relation(fields: [employeeId],references: [employee_id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
 }
 model employeeProjects {
   employee_project_id Int @id @default(autoincrement())
