@@ -6,7 +6,7 @@ const jwtSecret = process.env.jwtSecret;
 
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, salary, mainPosition, joiningDate } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingUser = await prisma.user.findFirst({
@@ -24,7 +24,10 @@ const registerUser = async (req, res) => {
         username: username,
         email: email,
         password: hashedPassword,
-        role: role
+        role: role,
+        salary: salary,  // Add salary
+        mainPosition: mainPosition,  // Add main position
+        joiningDate: new Date(joiningDate)  // Add joining date and ensure it's a Date object
       }
     });
 

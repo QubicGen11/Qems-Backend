@@ -61,7 +61,7 @@ const createEmployee = async (req, res) => {
                 updatedAt: new Date()
             }
         });
-        res.status(201).json(employee);
+        
         if (companyEmail) {
             await prisma.user.update({
                 where: {
@@ -72,6 +72,8 @@ const createEmployee = async (req, res) => {
                 }
             });
         }
+
+        res.status(201).json(employee);
     } catch (error) {
         console.error('Error creating employee:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -82,8 +84,12 @@ const getEmployeeById = async (req, res) => {
     const { id } = req.params;
     try {
         const employee = await prisma.employee.findUnique({
-            where: { employee_id: id }
+            where: { employee_id: id },
+            include: {
+                users: true, // Include related User model
+            },
         });
+
         if (employee) {
             res.status(200).json(employee);
         } else {
@@ -94,6 +100,7 @@ const getEmployeeById = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
@@ -159,7 +166,9 @@ const deleteEmployee = async (req, res) => {
 
 const getAllEmployees = async (req, res) => {
     try {
-        const employees = await prisma.employee.findMany();
+        const employees = await prisma.employee.findMany({
+            include: { users: true }, // Include related User model
+        });
         res.status(200).json(employees);
     } catch (error) {
         console.error('Error fetching employees:', error);
@@ -171,16 +180,26 @@ const fetchEmployeeDetails = async (req, res) => {
     const { email } = req.params;
     try {
         const getData = await prisma.employee.findFirst({
-            where: { companyEmail: email }
+            where: { companyEmail: email },
+            include: {
+                users: true, // Include related User model
+            },
         });
         if (!getData) {
             return res.status(400).send('Employee data is not available');
         }
-        return res.status(200).json([getData]);
+        return res.status(200).json(getData); // Return the data directly
     } catch (error) {
+        console.error('Internal server error:', error);
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
+
+
+
+
+
+
 
 const uploadEmployeeFile = async (req, res) => {
     const { email } = req.body;

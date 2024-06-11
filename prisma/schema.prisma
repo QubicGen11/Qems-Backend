@@ -8,19 +8,28 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 model User {
-  employeeId String?
-  employee Employee? @relation(fields: [employeeId], references: [employee_id])
+  employeeId String?  // Foreign key to Employee
+  employee Employee? @relation(fields: [employeeId], references: [employee_id]) // Relation to Employee
   username String?
-  email String @id
+  email String @id // Primary key
   password String 
   role String?
   status Status @default(Active)
   createdAt DateTime @default(now()) 
+  salary Float? // New field for salary
+  mainPosition String? // New field for main position
+  joiningDate DateTime? // New field for joining date
 }
+
+
+
+
 model EmployeeIdTracker {
   id              Int  @id @default(autoincrement())
   last_used_number Int @default(0)
 }
+
+
 model Employee {
   employee_id  String   @id
   employeeImg String?
@@ -47,6 +56,10 @@ model Employee {
   leaveRequests leaveRequests[]
   users        User[]
 }
+
+
+
+
 model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
