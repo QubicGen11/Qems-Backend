@@ -116,11 +116,11 @@
                 </tr>
                 <tr>
                     <td><strong>Emp Name:</strong> <%= employee.firstname %> <%= employee.lastname %></td>
-                    <td><strong>DOB:</strong> 01/01/2024</td>
+                    <td><strong>DOB:</strong> <%=    employee.dob %></td>
                 </tr>
                 <tr>
                     <td><strong>Location:</strong> ATP</td>
-                    <td><strong>Gender:</strong> M</td>
+                    <td><strong>Gender:</strong> <%=    employee.gender %></td>
                 </tr>
                 <tr>
                     <td><strong>Unit Code:</strong> 001</td>
@@ -135,7 +135,7 @@
                     <td><strong>PF UAN:</strong> UAN1234567890</td>
                 </tr>
                 <tr>
-                    <td><strong>Bank AC Name:</strong> John Doe</td>
+                    <td><strong>Bank AC Name:</strong> <%=    employee.firstname %> <%=    employee.lastname %></td>
                     <td><strong>EPS No:</strong> EPS12345678</td>
                 </tr>
                 <tr>
@@ -224,7 +224,7 @@
                     </tr>
                 </tbody>
             </table>
-            <p ><strong style="padding:3px ;">NET PAY (IN WORDS):</strong></p>
+            <p ><strong style="padding:3px ;">NET PAY (IN WORDS): <%=    employee.salary %></strong></p>
         </section>
 
         <div style="display: flex;">
