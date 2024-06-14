@@ -74,8 +74,11 @@ app.get('/documents/:type/:employeeId', async (req, res) => {
             case 'hike':
                 template = 'hike-letter';
                 break;
+            case 'payslip':
+                template = 'payslips';
+                break;
             default:
-                return res.status(400).send('Invalid document type');
+                return res.status(400).send('No documents found');
         }
 
         // Combine data from both models
