@@ -8,6 +8,7 @@ const path = require('path');
 const pdf = require('html-pdf');
 const fs = require('fs');
 const authRouter = require('./routes/authRouter');
+const userAuthRouter=require('./routes/userAuthRoute')
 const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
@@ -33,6 +34,7 @@ app.use('/qubinest', employeeRouter);
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use('/qubinest', reportRouter);
+app.use('/qubinest',userAuthRouter)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Set view engine to EJS

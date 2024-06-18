@@ -20,15 +20,10 @@ model User {
   mainPosition String? // New field for main position
   joiningDate DateTime? // New field for joining date
 }
-
-
-
-
 model EmployeeIdTracker {
   id              Int  @id @default(autoincrement())
   last_used_number Int @default(0)
 }
-
 
 model Employee {
   employee_id  String   @id
@@ -56,9 +51,6 @@ model Employee {
   leaveRequests leaveRequests[]
   users        User[]
 }
-
-
-
 
 model Attendance {
   id Int @id @default(autoincrement())
