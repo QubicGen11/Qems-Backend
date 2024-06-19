@@ -20,7 +20,10 @@ model User {
   mainPosition String? // New field for main position
   joiningDate DateTime? // New field for joining date
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 81b84811e1b21dfc0fa32700f8bc5ada6645abb0
 model EmployeeIdTracker {
   id              Int  @id @default(autoincrement())
   last_used_number Int @default(0)
