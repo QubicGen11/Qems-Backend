@@ -61,12 +61,12 @@ const loginUser = async (req, res) => {
     }
 
     // If password matches, generate a JWT token
-    const jwtToken = jwt.sign({ id: existingUser.id, email: existingUser.email }, jwtSecret, {
-      expiresIn: '2h',
-    });
+    // const jwtToken = jwt.sign({ id: existingUser.id, email: existingUser.email }, jwtSecret, {
+    //   expiresIn: '2h',
+    // });
 
-    // Set the token as a cookie in the response
-    res.cookie('token', jwtToken, { httpOnly: true });
+    // // Set the token as a cookie in the response
+    // res.cookie('token', jwtToken, { httpOnly: true });
 
     return res.status(200).json({ message: 'Login successful' });
   } catch (error) {

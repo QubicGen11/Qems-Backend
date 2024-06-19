@@ -1,12 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
   url       = env("DATABASE_URL")
 }
+
 model User {
   employeeId String?  // Foreign key to Employee
   employee Employee? @relation(fields: [employeeId], references: [employee_id]) // Relation to Employee
@@ -21,14 +21,10 @@ model User {
   joiningDate DateTime? // New field for joining date
 }
 
-
-
-
 model EmployeeIdTracker {
   id              Int  @id @default(autoincrement())
   last_used_number Int @default(0)
 }
-
 
 model Employee {
   employee_id  String   @id
@@ -57,9 +53,6 @@ model Employee {
   users        User[]
 }
 
-
-
-
 model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
@@ -73,6 +66,7 @@ model Attendance {
   updatedAt DateTime @updatedAt
   employee Employee? @relation(fields: [employeeId], references: [employee_id]) 
 }
+
 model leaveRequests {
   leave_id Int @id @default(autoincrement())
   employee_id String ?
@@ -84,7 +78,8 @@ model leaveRequests {
   createdAt DateTime
   updatedAt DateTime @updatedAt
 }
-model employeeLeaves{
+
+model employeeLeaves {
   id Int @id @default(autoincrement())
   leaveType String
   startDate DateTime 
@@ -94,6 +89,7 @@ model employeeLeaves{
   Reason String
   Comments String 
 }
+
 model Salary {
   salary_id Int @id @default(autoincrement())
   employee_id String
@@ -104,6 +100,7 @@ model Salary {
   updatedAt DateTime @updatedAt
   employee Employee @relation(fields: [employee_id], references: [employee_id])
 }
+
 model Projects {
   project_id Int @id @default(autoincrement())
   project_Name String
@@ -115,7 +112,8 @@ model Projects {
   updatedAt DateTime @updatedAt
   employeeProjects employeeProjects[]
 }
-model employeeReports{
+
+model employeeReports {
   id Int @id @default(autoincrement())
   employeeId String ?
   employeeEmail String ?
@@ -124,6 +122,7 @@ model employeeReports{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 model employeeProjects {
   employee_project_id Int @id @default(autoincrement())
   employee_id String
@@ -136,13 +135,27 @@ model employeeProjects {
   employee Employee @relation(fields: [employee_id], references: [employee_id])
   project Projects @relation(fields: [project_id], references: [project_id])
 }
-//enums
+
+model BankDetail {
+  id           Int      @id @default(autoincrement())
+  associateId  String
+  bankName     String
+  accountNumber String
+  ifscCode     String
+  panNumber    String
+  aadharNumber String
+  pfNumber     String
+  employee_id  String   @unique // Make the employee_id field unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
 enum Role {
   Employee
   Admin
   Intern 
   Manager
 }
+
 enum Status {
   Active
   Disabled

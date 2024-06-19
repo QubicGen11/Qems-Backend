@@ -124,6 +124,105 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 const PORT = process.env.PORT || 3000;
 
+
+app.post('/api/bankdetails/:employee_id', async (req, res) => {
+    const { employee_id } = req.params;
+    const {
+      associateId,
+      bankName,
+      accountNumber,
+      ifscCode,
+      panNumber,
+      aadharNumber,
+      pfNumber,
+    } = req.body;
+
+    try {
+      const bankDetail = await prisma.bankDetail.upsert({
+        where: { employee_id },
+        update: {
+          associateId,
+          bankName,
+          accountNumber,
+          ifscCode,
+          panNumber,
+          aadharNumber,
+          pfNumber,
+        },
+        create: {
+          associateId,
+          bankName,
+          accountNumber,
+          ifscCode,
+          panNumber,
+          aadharNumber,
+          pfNumber,
+          employee_id,
+        },
+      });
+      res.status(201).json(bankDetail);
+    } catch (error) {
+      console.error('Error saving bank details:', error);
+      res.status(500).json({ error: 'Failed to save bank details' });
+    }
+});
+
+// API to update bank details
+app.put('/api/bankdetails/:employee_id', async (req, res) => {
+    const { employee_id } = req.params;
+    const {
+        associateId,
+        bankName,
+        accountNumber,
+        ifscCode,
+        panNumber,
+        aadharNumber,
+        pfNumber,
+    } = req.body;
+
+    try {
+        const bankDetail = await prisma.bankDetail.update({
+            where: { employee_id },
+            data: {
+                associateId,
+                bankName,
+                accountNumber,
+                ifscCode,
+                panNumber,
+                aadharNumber,
+                pfNumber,
+            },
+        });
+        res.status(200).json(bankDetail);
+    } catch (error) {
+        console.error('Error updating bank details:', error);
+        res.status(500).json({ error: 'Failed to update bank details' });
+    }
+});
+
+// API to fetch bank details
+app.get('/api/bankdetails/:employee_id', async (req, res) => {
+    const { employee_id } = req.params;
+
+    try {
+        const bankDetail = await prisma.bankDetail.findUnique({
+            where: { employee_id },
+        });
+
+        if (!bankDetail) {
+            return res.status(404).json({ error: 'Bank details not found' });
+        }
+
+        res.status(200).json(bankDetail);
+    } catch (error) {
+        console.error('Error fetching bank details:', error);
+        res.status(500).json({ error: 'Failed to fetch bank details' });
+    }
+});
+
+  
+  
+
 // @starting app
 app.get("/", (req, res) => {
     res.send("API is working fine");
