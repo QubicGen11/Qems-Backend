@@ -8,7 +8,7 @@ const path = require('path');
 const pdf = require('html-pdf');
 const fs = require('fs');
 const authRouter = require('./routes/authRouter');
-const userAuthRouter=require('./routes/userAuthRoute')
+const userAuthRouter = require('./routes/userAuthRoute');
 const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
@@ -34,7 +34,7 @@ app.use('/qubinest', employeeRouter);
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use('/qubinest', reportRouter);
-app.use('/qubinest',userAuthRouter)
+app.use('/qubinest', userAuthRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Set view engine to EJS
@@ -114,23 +114,10 @@ app.get('/documents/:type/:employeeId', async (req, res) => {
     }
 });
 
-
-
-
-// @prisma config
-async function shutdown() {
-    await prisma.$disconnect();
-    process.exit(0);
-}
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-const PORT = process.env.PORT || 3000;
-
-
+// API to save or update bank details
 app.post('/api/bankdetails/:employee_id', async (req, res) => {
     const { employee_id } = req.params;
     const {
-      associateId,
       bankName,
       accountNumber,
       ifscCode,
@@ -143,7 +130,6 @@ app.post('/api/bankdetails/:employee_id', async (req, res) => {
       const bankDetail = await prisma.bankDetail.upsert({
         where: { employee_id },
         update: {
-          associateId,
           bankName,
           accountNumber,
           ifscCode,
@@ -152,7 +138,6 @@ app.post('/api/bankdetails/:employee_id', async (req, res) => {
           pfNumber,
         },
         create: {
-          associateId,
           bankName,
           accountNumber,
           ifscCode,
@@ -173,7 +158,6 @@ app.post('/api/bankdetails/:employee_id', async (req, res) => {
 app.put('/api/bankdetails/:employee_id', async (req, res) => {
     const { employee_id } = req.params;
     const {
-        associateId,
         bankName,
         accountNumber,
         ifscCode,
@@ -186,7 +170,6 @@ app.put('/api/bankdetails/:employee_id', async (req, res) => {
         const bankDetail = await prisma.bankDetail.update({
             where: { employee_id },
             data: {
-                associateId,
                 bankName,
                 accountNumber,
                 ifscCode,
@@ -208,22 +191,29 @@ app.get('/api/bankdetails/:employee_id', async (req, res) => {
 
     try {
         const bankDetail = await prisma.bankDetail.findUnique({
-            where: { employee_id },
+            where: { employee_id: employee_id },
         });
 
-        if (!bankDetail) {
-            return res.status(404).json({ error: 'Bank details not found' });
+        if (bankDetail) {
+            res.json(bankDetail);
+        } else {
+            res.status(404).json({ error: 'Bank details not found' });
         }
-
-        res.status(200).json(bankDetail);
     } catch (error) {
         console.error('Error fetching bank details:', error);
-        res.status(500).json({ error: 'Failed to fetch bank details' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-  
-  
+// @prisma config
+async function shutdown() {
+    await prisma.$disconnect();
+    process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+const PORT = process.env.PORT || 3000;
 
 // @starting app
 app.get("/", (req, res) => {
