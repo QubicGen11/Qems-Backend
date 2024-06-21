@@ -13,6 +13,9 @@ const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
 const authenticateToken = require('./middlewares/authenticateUser');
+const documentRouter = require('./routes/documentRouter');
+const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
+
 
 dotenv.config();
 
@@ -36,174 +39,18 @@ app.use(cookieParser());
 app.use('/qubinest', reportRouter);
 app.use('/qubinest', userAuthRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/bankdetails', bankDetailsRouter);
 
+app.use('/documents', documentRouter);
 // Set view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Dynamic route to render the requested document with employee data
-app.get('/documents/:type/:employeeId', async (req, res) => {
-    const { type, employeeId } = req.params;
 
-    try {
-        const employee = await prisma.employee.findUnique({
-            where: { employee_id: employeeId },
-            include: {
-                users: true, // Include related User model
-            },
-        });
-
-        if (!employee) {
-            return res.status(404).send('Employee not found');
-        }
-
-        const user = employee.users && employee.users[0]; // Assuming a one-to-one relationship
-        if (!user) {
-            return res.status(404).send('User not found');
-        }
-
-        let template;
-        switch (type) {
-            case 'offer':
-                template = 'offer_letter';
-                break;
-            case 'joining':
-                template = 'joining-letter';
-                break;
-            case 'experience':
-                template = 'experience-letter';
-                break;
-            case 'hike':
-                template = 'hike-letter';
-                break;
-            case 'payslip':
-                template = 'payslips';
-                break;
-            default:
-                return res.status(400).send('No documents found');
-        }
-
-        // Combine data from both models
-        const data = {
-            employee_id: employee.employee_id,
-            firstname: employee.firstname,
-            lastname: employee.lastname,
-            dob: employee.dob,
-            gender: employee.gender,
-            address: employee.address,
-            phone: employee.phone,
-            email: employee.email,
-            position: employee.position,
-            education: employee.education,
-            skills: employee.skills,
-            linkedin: employee.linkedin,
-            about: employee.about,
-            companyEmail: employee.companyEmail,
-            hireDate: employee.hireDate,
-            createdAt: employee.createdAt,
-            updatedAt: employee.updatedAt,
-            joiningDate: user.joiningDate,
-            salary: user.salary,
-            mainPosition: user.mainPosition
-        };
-
-        res.render(template, { employee: data });
-    } catch (error) {
-        console.error('Error fetching employee:', error);
-        res.status(500).send('Error fetching employee');
-    }
-});
 
 // API to save or update bank details
-app.post('/api/bankdetails/:employee_id', async (req, res) => {
-    const { employee_id } = req.params;
-    const {
-      bankName,
-      accountNumber,
-      ifscCode,
-      panNumber,
-      aadharNumber,
-      pfNumber,
-    } = req.body;
 
-    try {
-      const bankDetail = await prisma.bankDetail.upsert({
-        where: { employee_id },
-        update: {
-          bankName,
-          accountNumber,
-          ifscCode,
-          panNumber,
-          aadharNumber,
-          pfNumber,
-        },
-        create: {
-          bankName,
-          accountNumber,
-          ifscCode,
-          panNumber,
-          aadharNumber,
-          pfNumber,
-          employee_id,
-        },
-      });
-      res.status(201).json(bankDetail);
-    } catch (error) {
-      console.error('Error saving bank details:', error);
-      res.status(500).json({ error: 'Failed to save bank details' });
-    }
-});
-
-// API to update bank details
-app.put('/api/bankdetails/:employee_id', async (req, res) => {
-    const { employee_id } = req.params;
-    const {
-        bankName,
-        accountNumber,
-        ifscCode,
-        panNumber,
-        aadharNumber,
-        pfNumber,
-    } = req.body;
-
-    try {
-        const bankDetail = await prisma.bankDetail.update({
-            where: { employee_id },
-            data: {
-                bankName,
-                accountNumber,
-                ifscCode,
-                panNumber,
-                aadharNumber,
-                pfNumber,
-            },
-        });
-        res.status(200).json(bankDetail);
-    } catch (error) {
-        console.error('Error updating bank details:', error);
-        res.status(500).json({ error: 'Failed to update bank details' });
-    }
-});
-
-// API to fetch bank details
-app.get('/api/bankdetails/:employee_id', async (req, res) => {
-    const { employee_id } = req.params;
-
-    try {
-        const bankDetail = await prisma.bankDetail.findUnique({
-            where: { employee_id: employee_id },
-        });
-
-        if (bankDetail) {
-            res.json(bankDetail);
-        } else {
-            res.status(404).json({ error: 'Bank details not found' });
-        }
-    } catch (error) {
-        console.error('Error fetching bank details:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
 
 // @prisma config
 async function shutdown() {

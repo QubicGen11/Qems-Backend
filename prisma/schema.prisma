@@ -137,14 +137,14 @@ model employeeProjects {
 
 model BankDetail {
   id           Int      @id @default(autoincrement())
-  bankName     String
-  accountNumber String
-  ifscCode     String
-  panNumber    String
-  aadharNumber String
-  pfNumber     String
-  employee_id  String   @unique
-  createdAt    DateTime @default(now())
+  bankName     String ?
+  accountNumber String ?
+  ifscCode     String ?
+  panNumber    String ?
+  aadharNumber String ?
+  pfNumber     String ?
+  employee_id  String ?  @unique 
+  createdAt    DateTime @default(now()) 
   updatedAt    DateTime @updatedAt
 }
 
