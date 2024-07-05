@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
 }
 
@@ -20,6 +20,7 @@ model User {
   mainPosition String? // New field for main position
   joiningDate DateTime? // New field for joining date
 }
+
 model EmployeeIdTracker {
   id              Int  @id @default(autoincrement())
   last_used_number Int @default(0)
@@ -44,110 +45,174 @@ model Employee {
   about        String?
   createdAt    DateTime? @default(now())
   updatedAt    DateTime? @updatedAt
+  teamName String?
+  isTeamLead Boolean @default(false)
+  reportingManager String?
+  reportingManagerId String?
+  department   String?
   attendances  Attendance[]
   salaries     Salary[]
   reports      employeeReports[]
   employee_Projects employeeProjects[]
   leaveRequests leaveRequests[]
+  leaveBalance LeaveBalance[]
   users        User[]
+  teams Team[]
+  employeeLeaves employeeLeaves[]
+  
 }
 
 model Attendance {
   id Int @id @default(autoincrement())
   employeeId String 
   date DateTime @default(now())
+  employeeName String?
+  employeeImage String?
   status String?
   reports String?
   checkin_Time DateTime?
   checkout_Time DateTime?
-  companyEmail String 
+  companyEmail String ?
+  Department String?
+  joinDate DateTime ?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   employee Employee? @relation(fields: [employeeId], references: [employee_id]) 
 }
 
-model leaveRequests {
-  leave_id Int @id @default(autoincrement())
-  employee_id String ?
-  employee Employee ? @relation(fields: [employee_id],references: [employee_id])
-  leaveType String
-  start_Date DateTime
-  end_Date DateTime
-  status String
-  createdAt DateTime
-  updatedAt DateTime @updatedAt
-}
-
-model employeeLeaves {
-  id Int @id @default(autoincrement())
-  leaveType String
-  startDate DateTime 
-  endDate DateTime ?
-  Duration String 
-  leaveDocumrnt String ?
-  Reason String
-  Comments String 
-}
-
-model Salary {
-  salary_id Int @id @default(autoincrement())
-  employee_id String
-  amount Float
-  start_Date DateTime
-  end_Date DateTime
-  createdAt DateTime
-  updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employee_id], references: [employee_id])
-}
-
-model Projects {
-  project_id Int @id @default(autoincrement())
-  project_Name String
-  start_Date DateTime
-  end_Date DateTime
-  budget Float
-  manager_id Int
-  createdAt DateTime
-  updatedAt DateTime @updatedAt
-  employeeProjects employeeProjects[]
-}
-
-model employeeReports {
-  id Int @id @default(autoincrement())
-  employeeId String ?
-  employeeEmail String ?
-  report String
-  employee Employee?@relation(fields: [employeeId],references: [employee_id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model employeeProjects {
-  employee_project_id Int @id @default(autoincrement())
-  employee_id String
-  project_id Int
-  role String
-  start_Date DateTime
-  end_Date DateTime 
-  createdAt DateTime
-  updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employee_id], references: [employee_id])
-  project Projects @relation(fields: [project_id], references: [project_id])
-}
-
 model BankDetail {
   id           Int      @id @default(autoincrement())
-  bankName     String ?
-  accountNumber String ?
-  ifscCode     String ?
-  panNumber    String ?
-  aadharNumber String ?
-  pfNumber     String ?
-  employee_id  String ?  @unique 
+  bankName     String?
+  accountNumber String?
+  ifscCode     String?
+  panNumber    String?
+  aadharNumber String?
+  pfNumber     String?
+  employee_id  String?  @unique 
   createdAt    DateTime @default(now()) 
   updatedAt    DateTime @updatedAt
 }
 
+model leaveRequests {
+  leave_id Int @id @default(autoincrement())
+  employee_id String?
+  companyEmail String?
+  department String?
+  employee Employee? @relation(fields: [employee_id], references: [employee_id])
+  leaveType String
+  duration String?
+  startDate DateTime?
+  endDate DateTime?
+  reason String?
+  status String?
+  leaveDocument String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model LeaveBalance{
+  leaveBalanceId Int @id @default(autoincrement())
+   employee_id String?
+  companyEmail String?
+  department String?
+  employee Employee? @relation(fields: [employee_id], references: [employee_id])
+  totalLeaves Int @default(25)
+  acceptedLeaves Int @default(0)
+  rejectedLeaves Int @default(0)
+  expiredLeaves Int @default(0)
+  carryOverLeaves Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model LeaveType{
+  id Int @id @default(autoincrement())
+  LeaveName String? @unique
+  Type String?
+  LeaveUnit String?
+  Status String?
+  Note String?
+}
+model Team {
+  id             Int        @id @default(autoincrement())
+  teamName       String?
+  description    String?
+  departmentName String?
+  teamLeadName String?
+  teamLeadId     String? @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  employee Employee? @relation(fields: [teamLeadId], references: [employee_id]) 
+
+}
+model teamMember {
+  id         Int      @id @default(autoincrement())
+  teamId     Int
+  employeeId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([teamId, employeeId])
+}
+
+model employeeLeaves {
+  id         Int      @id @default(autoincrement())
+  employee_id String?
+  leaveType  String
+  employee Employee? @relation(fields: [employee_id], references: [employee_id])
+  startDate  DateTime? 
+  endDate    DateTime?
+  Duration   String? 
+  status     String?
+  Reason     String?
+  Comments   String?
+}
+
+model Salary {
+  salary_id  Int      @id @default(autoincrement())
+  employee_id String
+  amount      Float
+  start_Date  DateTime
+  end_Date    DateTime
+  createdAt   DateTime
+  updatedAt   DateTime @updatedAt
+  employee    Employee @relation(fields: [employee_id], references: [employee_id])
+}
+
+model Projects {
+  project_id   Int      @id @default(autoincrement())
+  project_Name String
+  start_Date   DateTime
+  projectTeam  String?
+  end_Date     DateTime
+  budget       Float
+  manager_id   Int
+  createdAt    DateTime
+  updatedAt    DateTime @updatedAt
+  employeeProjects employeeProjects[]
+}
+
+model employeeReports {
+  id            Int      @id @default(autoincrement())
+  employeeId    String?
+  employeeEmail String?
+  report        String
+  employee      Employee? @relation(fields: [employeeId], references: [employee_id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model employeeProjects {
+  employee_project_id Int      @id @default(autoincrement())
+  employee_id         String
+  project_id          Int
+  role                String
+  start_Date          DateTime
+  end_Date            DateTime 
+  createdAt           DateTime
+  updatedAt           DateTime @updatedAt
+  employee            Employee @relation(fields: [employee_id], references: [employee_id])
+  project             Projects @relation(fields: [project_id], references: [project_id])
+}
+
+//enums
 enum Role {
   Employee
   Admin

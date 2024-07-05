@@ -13,9 +13,10 @@ const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
 const authenticateToken = require('./middlewares/authenticateUser');
+const leaveRequestRouter=require('./routes/leaveRequestRouter')
+const teamRouter=require('./routes/teamRouter')
 const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
-
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 app.use('/qubinest', reportRouter);
 app.use('/qubinest', userAuthRouter);
+app.use('/qubinest', leaveRequestRouter);
+app.use('/qubinest', teamRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
 

@@ -121,5 +121,13 @@ const resetPassword = async (req, res) => {
     return res.status(500).send('Server error');
   }
 };
+const getAllUsers=async(req,res)=>{
+  try {
+    const allUsers=await prisma.user.findMany({})
+    return res.status(200).send(allUsers)
+  } catch (error) {
+    return res.status(500).send('internal error'+error.message)
 
-module.exports = { registerUser, loginUser, logoutUser, resetPassword };
+  }
+}
+module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers };

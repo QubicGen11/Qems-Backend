@@ -30,7 +30,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, education, skills, about, companyEmail } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email,department, linkedin, education, skills, about, companyEmail } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const dobDate = dob ? new Date(dob) : null;
@@ -50,6 +50,7 @@ const createEmployee = async (req, res) => {
                 address: address || null,
                 phone: phone || null,
                 email: email,
+                department:department,
                 position: position,
                 education: education,
                 skills: skills,
@@ -117,9 +118,7 @@ const updateEmployee = async (req, res) => {
         if (!existingEmployee) {
             return res.status(404).json({ error: 'Employee not found' });
         }
-
         const dobDate = dob ? new Date(dob) : null;
-
         // Verify that the dob is a valid date
         if (dobDate && isNaN(dobDate.getTime())) {
             throw new Error('Invalid date format for dob');
@@ -152,10 +151,10 @@ const updateEmployee = async (req, res) => {
 };
 
 const deleteEmployee = async (req, res) => {
-    const { id } = req.params;
+    const { employeeId } = req.params;
     try {
         await prisma.employee.delete({
-            where: { employee_id: id }
+            where: { employee_id: employeeId }
         });
         res.status(204).send('Successfully deleted employee');
     } catch (error) {
@@ -177,29 +176,32 @@ const getAllEmployees = async (req, res) => {
 };
 
 const fetchEmployeeDetails = async (req, res) => {
-    const { email } = req.params;
+    const { email,employeeId } = req.params;
     try {
         const getData = await prisma.employee.findFirst({
             where: { companyEmail: email },
             include: {
-                users: true, // Include related User model
+                users: true, 
             },
+            
         });
-        if (!getData) {
+        const getDataById=await prisma.employee.findFirst({
+            where:{
+                employee_id:employeeId
+            }
+        })
+        if (!getData || !getDataById) {
             return res.status(400).send('Employee data is not available');
         }
         return res.status(200).json(getData); // Return the data directly
+        return res.status(200).json(getDataById)
     } catch (error) {
         console.error('Internal server error:', error);
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
 
-
-
-
-
-
+ 
 
 const uploadEmployeeFile = async (req, res) => {
     const { email } = req.body;
@@ -232,6 +234,6 @@ const uploadEmployeeFile = async (req, res) => {
     }
 };
 
+ 
 const uploadFile = upload.single('file');
-
 module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, uploadEmployeeFile, uploadFile };
