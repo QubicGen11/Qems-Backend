@@ -152,17 +152,34 @@ const updateEmployee = async (req, res) => {
 
 const deleteEmployee = async (req, res) => {
     const { employeeId } = req.params;
+    console.log('Employee ID:', employeeId); // Debugging line
     try {
-        await prisma.employee.delete({
-            where: { employee_id: employeeId }
-        });
-        res.status(204).send('Successfully deleted employee');
+      if (!employeeId) {
+        return res.status(400).send('Employee ID is required');
+      }
+  
+      // Delete related attendance records
+      await prisma.attendance.deleteMany({
+        where: { employee_id: employeeId }
+      });
+  
+      // Delete related salary records (if any)
+      await prisma.salary.deleteMany({
+        where: { employee_id: employeeId }
+      });
+  
+      // Delete the employee record
+      await prisma.employee.delete({
+        where: { employee_id: employeeId }
+      });
+  
+      res.status(204).send('Successfully deleted employee');
     } catch (error) {
-        console.error('Error deleting employee:', error);
-        res.status(500).json({ error: 'Internal server error' });
+      console.error('Error deleting employee:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
-};
-
+  };
+  
 const getAllEmployees = async (req, res) => {
     try {
         const employees = await prisma.employee.findMany({
@@ -201,7 +218,22 @@ const fetchEmployeeDetails = async (req, res) => {
     }
 };
 
- 
+ const fetchEmployeeDataById=async(req,res)=>{
+    const employeeId=req.params
+    try {
+        const getEmployeeData=await prisma.employee.findFirst({
+            where:{
+                employee_id:employeeId
+            }
+        })
+        if(!getEmployeeData){
+            return res.status(400).send('employee data not found')
+        }
+        return res.status(200).send(getEmployeeData)
+    } catch (error) {
+        return res.status(500).send('Internal error'+error.message)
+    }
+ }
 
 const uploadEmployeeFile = async (req, res) => {
     const { email } = req.body;
@@ -236,4 +268,4 @@ const uploadEmployeeFile = async (req, res) => {
 
  
 const uploadFile = upload.single('file');
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, uploadEmployeeFile, uploadFile };
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, fetchEmployeeDataById,uploadEmployeeFile, uploadFile };
