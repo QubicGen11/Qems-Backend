@@ -121,6 +121,44 @@ const resetPassword = async (req, res) => {
     return res.status(500).send('Server error');
   }
 };
+
+const changePassword = async (req, res) => {
+  const { email, currentPassword, newPassword } = req.body;
+  
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email
+      }
+    });
+    
+    if (!user) {
+      return res.status(400).send('User not found');
+    }
+    
+    const isCurrentPassword = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isCurrentPassword) {
+      return res.status(400).send('Incorrect current password');
+    }
+    
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    
+    await prisma.user.update({
+      where: {
+        email: email
+      },
+      data: {
+        password: hashedNewPassword
+      }
+    });
+    
+    return res.status(200).send('Password updated successfully');
+    
+  } catch (error) {
+    return res.status(500).send('Internal server error: ' + error.message);
+  }
+};
 const getAllUsers=async(req,res)=>{
   try {
     const allUsers=await prisma.user.findMany({})
@@ -130,4 +168,4 @@ const getAllUsers=async(req,res)=>{
 
   }
 }
-module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers };
+module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers,changePassword };
