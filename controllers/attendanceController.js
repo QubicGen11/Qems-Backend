@@ -1,5 +1,4 @@
 const { PrismaClient } = require('@prisma/client');
-const express = require('express');
 const prisma = new PrismaClient();
 
 const clockIn = async (req, res) => {
@@ -18,8 +17,8 @@ const clockIn = async (req, res) => {
         checkin_Time: new Date(),
         companyEmail: email,
         status: 'pending',
-        employeeName:user.username,
-        joinDate:user.joiningDate
+        employeeName: user.username,
+        joinDate: user.joiningDate
       }
     });
     console.log('Clock-in successful:', attendance);
@@ -111,6 +110,7 @@ const clockOut = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 const getAttendance = async (req, res) => {
   const { email } = req.params;
   try {
@@ -135,86 +135,7 @@ const getAttendance = async (req, res) => {
     return res.status(500).send('Server error');
   }
 };
-const teamAttendanceTracker=async(req,res)=>{
-  try {
-    
-  } catch (error) {
-    
-  }
-}
-// const getAttendanceById = async (req, res) => {
-//   const { employeeId, year, month, week } = req.params;
 
-//   try {
-//     const isEmployee = await prisma.employee.findFirst({
-//       where: {
-//         employee_id: employeeId
-//       }
-//     });
-
-//     if (!isEmployee) {
-//       return res.status(400).send('Employee data not found');
-//     }
-
-//     const dateFilter = {};
-//     let hasDateFilter = false;
-
-//     if (year && !isNaN(year)) {
-//       const parsedYear = parseInt(year, 10);
-//       dateFilter.gte = new Date(parsedYear, 0, 1);
-//       dateFilter.lt = new Date(parsedYear + 1, 0, 1);
-//       hasDateFilter = true;
-//     }
-
-//     if (month && !isNaN(month)) {
-//       if (!year || isNaN(year)) {
-//         return res.status(400).send('Year must be provided when filtering by month');
-//       }
-//       const parsedYear = parseInt(year, 10);
-//       const parsedMonth = parseInt(month, 10) - 1;
-//       dateFilter.gte = new Date(parsedYear, parsedMonth, 1);
-//       dateFilter.lt = new Date(parsedYear, parsedMonth + 1, 1);
-//       hasDateFilter = true;
-//     }
-
-//     if (week && !isNaN(week)) {
-//       if (!year || isNaN(year)) {
-//         return res.status(400).send('Year must be provided when filtering by week');
-//       }
-//       const parsedYear = parseInt(year, 10);
-//       const parsedWeek = parseInt(week, 10);
-//       const firstDayOfYear = new Date(parsedYear, 0, 1);
-//       const firstDayOfWeek = new Date(firstDayOfYear);
-//       firstDayOfWeek.setDate(firstDayOfYear.getDate() + (parsedWeek - 1) * 7 - firstDayOfYear.getDay() + 1);
-      
-//       // Validate the dates
-//       if (isNaN(firstDayOfWeek.getTime())) {
-//         return res.status(400).send('Invalid date calculated for week filter');
-//       }
-
-//       dateFilter.gte = firstDayOfWeek;
-//       dateFilter.lt = new Date(firstDayOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
-//       hasDateFilter = true;
-//     }
-
-//     // Debugging logs
-//     console.log('Date Filter:', dateFilter);
-
-//     const attendanceByEmployeeId = await prisma.attendance.findMany({
-//       where: {
-//         employeeId: employeeId,
-//         ...(hasDateFilter && { date: dateFilter })
-//       },
-//       orderBy: {
-//         date: 'asc'
-//       }
-//     });
-
-//     return res.status(200).send(attendanceByEmployeeId);
-//   } catch (error) {
-//     return res.status(500).send('Internal server error: ' + error.message);
-//   }
-// };
 const getAllAttendance = async (req, res) => {
   const { employeeId, year, month, week } = req.params;
 
@@ -266,7 +187,7 @@ const getAllAttendance = async (req, res) => {
     return res.status(500).send('Internal server error: ' + error.message);
   }
 };
- 
+
 const approveAttendance = async (req, res) => {
   const { employeeId, year, month } = req.body;
 
@@ -309,9 +230,6 @@ const approveAttendance = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
-
 
 const getAverageWorkingTime = async (req, res) => {
   const { employeeId } = req.params;
@@ -393,15 +311,15 @@ const singleUserAttendance = async (req, res) => {
     return res.status(500).send('Internal server error: ' + error.message);
   }
 };
+
 const approveSingleAttendance = async (req, res) => {
-  const { employeeId, adminEmail, year, month } = req.body;
+  const { employeeId, adminEmail, year, month, selectedIds } = req.body;
 
   try {
-    if (!year || !month) {
-      return res.status(400).json({ message: 'Invalid parameters. Please provide year and month.' });
+    if (!year || !month || !selectedIds) {
+      return res.status(400).json({ message: 'Invalid parameters. Please provide year, month, and selectedIds.' });
     }
 
-    // Fetch user from the user table
     const user = await prisma.user.findUnique({
       where: { email: adminEmail }
     });
@@ -410,20 +328,13 @@ const approveSingleAttendance = async (req, res) => {
       return res.status(400).json({ message: 'User not found.' });
     }
 
-    // Check if the user role is Manager or Admin
     if (user.role !== 'Manager' && user.role !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Only Manager or Admin can approve attendance.' });
     }
 
-    const dateFilter = {
-      gte: new Date(year, month - 1, 1),
-      lt: new Date(year, month, 1)
-    };
-
     const updatedAttendance = await prisma.attendance.updateMany({
       where: {
-        employeeId: employeeId,
-        date: dateFilter
+        id: { in: selectedIds }
       },
       data: { status: 'approved' }
     });
@@ -435,15 +346,15 @@ const approveSingleAttendance = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 const declineSingleAttendance = async (req, res) => {
-  const { employeeId, adminEmail, year, month } = req.body;
+  const { employeeId, adminEmail, year, month, selectedIds } = req.body;
 
   try {
-    if (!year || !month) {
-      return res.status(400).json({ message: 'Invalid parameters. Please provide year and month.' });
+    if (!year || !month || !selectedIds) {
+      return res.status(400).json({ message: 'Invalid parameters. Please provide year, month, and selectedIds.' });
     }
 
-    // Fetch user from the user table
     const user = await prisma.user.findUnique({
       where: { email: adminEmail }
     });
@@ -452,33 +363,33 @@ const declineSingleAttendance = async (req, res) => {
       return res.status(400).json({ message: 'User not found.' });
     }
 
-    // Check if the user role is Manager or Admin
     if (user.role !== 'Manager' && user.role !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Only Manager or Admin can approve attendance.' });
     }
 
-    const dateFilter = {
-      gte: new Date(year, month - 1, 1),
-      lt: new Date(year, month, 1)
-    };
-
     const updatedAttendance = await prisma.attendance.updateMany({
       where: {
-        employeeId: employeeId,
-        date: dateFilter
+        id: { in: selectedIds }
       },
-      data: { status: 'decline' }
+      data: { status: 'declined' }
     });
 
-    console.log('Attendance approval successful:', updatedAttendance);
-    return res.status(200).json({ message: 'Attendance approved', updatedAttendance });
+    console.log('Attendance declination successful:', updatedAttendance);
+    return res.status(200).json({ message: 'Attendance declined', updatedAttendance });
   } catch (error) {
-    console.error('Error approving attendance:', error);
+    console.error('Error declining attendance:', error);
     return res.status(500).json({ error: error.message });
   }
 };
 
-
-
-// Router setup
-module.exports = { clockIn, clockOut, employeeReport, getAttendance,getAllAttendance ,getAverageWorkingTime, singleUserAttendance,approveSingleAttendance,declineSingleAttendance };
+module.exports = { 
+  clockIn, 
+  clockOut, 
+  employeeReport, 
+  getAttendance,
+  getAllAttendance,
+  getAverageWorkingTime, 
+  singleUserAttendance,
+  approveSingleAttendance,
+  declineSingleAttendance
+};
