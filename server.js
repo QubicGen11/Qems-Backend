@@ -29,7 +29,8 @@ app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
 app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 const corsOptions = {
-    origin: 'http://localhost:5173',
+    // origin: 'http://localhost:5173',
+    origin: 'https://qubinest-frontend.vercel.app/',
     credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
