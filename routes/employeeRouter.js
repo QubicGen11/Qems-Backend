@@ -1,22 +1,32 @@
-    const express = require('express');
-    const router = express.Router();
-    const { PrismaClient } = require('@prisma/client');
-    const employeeController=require('../controllers/employeeDetailController')
-    const prisma = new PrismaClient();
-    const{createEmployee,fetchEmployeeDetails,fetchEmployeeDataById,uploadEmployeeFile,uploadFile,getAllEmployees,getEmployeeById,updateEmployee,deleteEmployee,fetchEmployeeDetailById}=require('../controllers/employeeDetailController')
+const express = require('express');
+const router = express.Router();
+const employeeController = require('../controllers/employeeDetailController');
+const {
+  createEmployee,
+  fetchEmployeeDetails,
+  fetchEmployeeDataById,
+  getAllEmployees,
+  getEmployeeById,
+  updateEmployee,
+  deleteEmployee,
+  uploadFile,
+  uploadEmployeeFile
+} = employeeController;
 
-    router.post('/employees', createEmployee);
+// Define your routes
+router.post('/employees', createEmployee);
+router.get('/getemployees/:email', fetchEmployeeDetails);
+router.get('/employees/:id', getEmployeeById);
+router.get('/employees', getAllEmployees);
+router.get('/employee/:employeeId', fetchEmployeeDataById);
+router.put('/employees/:id', updateEmployee);
+router.delete('/employees/:employeeId', deleteEmployee);
 
-    router.get('/getemployees/:email/:employeeId?', fetchEmployeeDetails);
-    router.get('/getemployees/:employeeId',fetchEmployeeDataById );
-    
+// Since you mentioned not using Multer, I'll assume you want to handle file uploads directly via base64
+// If using Multer, uncomment the following line
+// router.post('/upload', uploadFile, uploadEmployeeFile);
 
+// Direct file upload without Multer (assuming you receive a base64 encoded string in the request body)
+router.post('/upload', uploadEmployeeFile);
 
-    router.post('/upload', employeeController.uploadFile,employeeController.uploadEmployeeFile );
-
-    router.get('/employees', getAllEmployees);
-    router.get('/employees/:id', getEmployeeById);
-    router.put('/employees/:id', updateEmployee);
-    router.delete('/employees/:employeeId', deleteEmployee);
-
-    module.exports = router;
+module.exports = router;

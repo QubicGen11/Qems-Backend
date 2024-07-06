@@ -17,12 +17,16 @@ const leaveRequestRouter=require('./routes/leaveRequestRouter')
 const teamRouter=require('./routes/teamRouter')
 const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
+const bodyParser = require('body-parser');
 
 dotenv.config();
 
 // @initializing prisma and express app
 const prisma = new PrismaClient();
 const app = express();
+
+app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
+app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 const corsOptions = {
     origin: 'http://localhost:5173',

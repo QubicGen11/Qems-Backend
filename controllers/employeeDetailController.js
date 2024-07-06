@@ -1,18 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const multer = require('multer');
-
-// Set up storage engine for Multer
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Uploads directory
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
-    }
-});
-const upload = multer({ storage: storage });
+const path = require('path');
 
 const generateEmployeeId = async () => {
     const prefix = 'QG24';
@@ -30,7 +18,7 @@ const generateEmployeeId = async () => {
 };
 
 const createEmployee = async (req, res) => {
-    const { firstname, lastname, dob, gender, address, phone, position, email,department, linkedin, education, skills, about, companyEmail } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, department, linkedin, education, skills, about, companyEmail, employeeImg } = req.body;
     try {
         const employeeId = await generateEmployeeId();
         const dobDate = dob ? new Date(dob) : null;
@@ -50,19 +38,20 @@ const createEmployee = async (req, res) => {
                 address: address || null,
                 phone: phone || null,
                 email: email,
-                department:department,
+                department: department,
                 position: position,
                 education: education,
                 skills: skills,
                 linkedin: linkedin || null,
                 about: about || null,
                 companyEmail: companyEmail,
+                employeeImg: employeeImg || null,
                 hireDate: new Date(),
                 createdAt: new Date(),
                 updatedAt: new Date()
             }
         });
-        
+
         if (companyEmail) {
             await prisma.user.update({
                 where: {
@@ -102,10 +91,9 @@ const getEmployeeById = async (req, res) => {
     }
 };
 
-
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
-    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about, education, skills } = req.body;
+    const { firstname, lastname, dob, gender, address, phone, position, email, linkedin, about, education, skills, employeeImg } = req.body;
 
     try {
         console.log('Update request received for employee ID:', id);
@@ -124,23 +112,26 @@ const updateEmployee = async (req, res) => {
             throw new Error('Invalid date format for dob');
         }
 
+        const employeeData = {
+            firstname: firstname || null,
+            lastname: lastname || null,
+            dob: dobDate,
+            gender: gender || null,
+            address: address || null,
+            phone: phone || null,
+            email: email,
+            position: position,
+            linkedin: linkedin || null,
+            about: about || null,
+            education: education || null,
+            skills: skills || null,
+            updatedAt: new Date(),
+            employeeImg: employeeImg || null
+        };
+
         const employee = await prisma.employee.update({
             where: { employee_id: id },
-            data: {
-                firstname: firstname || null,
-                lastname: lastname || null,
-                dob: dobDate,
-                gender: gender || null,
-                address: address || null,
-                phone: phone || null,
-                email: email,
-                position: position,
-                linkedin: linkedin || null,
-                about: about || null,
-                education: education || null,
-                skills: skills || null,
-                updatedAt: new Date()
-            }
+            data: employeeData
         });
         console.log('Updated employee:', employee);
         res.status(200).json(employee);
@@ -154,32 +145,32 @@ const deleteEmployee = async (req, res) => {
     const { employeeId } = req.params;
     console.log('Employee ID:', employeeId); // Debugging line
     try {
-      if (!employeeId) {
-        return res.status(400).send('Employee ID is required');
-      }
-  
-      // Delete related attendance records
-      await prisma.attendance.deleteMany({
-        where: { employee_id: employeeId }
-      });
-  
-      // Delete related salary records (if any)
-      await prisma.salary.deleteMany({
-        where: { employee_id: employeeId }
-      });
-  
-      // Delete the employee record
-      await prisma.employee.delete({
-        where: { employee_id: employeeId }
-      });
-  
-      res.status(204).send('Successfully deleted employee');
+        if (!employeeId) {
+            return res.status(400).send('Employee ID is required');
+        }
+
+        // Delete related attendance records
+        await prisma.attendance.deleteMany({
+            where: { employee_id: employeeId }
+        });
+
+        // Delete related salary records (if any)
+        await prisma.salary.deleteMany({
+            where: { employee_id: employeeId }
+        });
+
+        // Delete the employee record
+        await prisma.employee.delete({
+            where: { employee_id: employeeId }
+        });
+
+        res.status(204).send('Successfully deleted employee');
     } catch (error) {
-      console.error('Error deleting employee:', error);
-      res.status(500).json({ error: 'Internal server error' });
+        console.error('Error deleting employee:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-  };
-  
+};
+
 const getAllEmployees = async (req, res) => {
     try {
         const employees = await prisma.employee.findMany({
@@ -193,54 +184,52 @@ const getAllEmployees = async (req, res) => {
 };
 
 const fetchEmployeeDetails = async (req, res) => {
-    const { email,employeeId } = req.params;
+    const { email, employeeId } = req.params;
     try {
         const getData = await prisma.employee.findFirst({
             where: { companyEmail: email },
             include: {
-                users: true, 
+                users: true,
             },
-            
         });
-        const getDataById=await prisma.employee.findFirst({
-            where:{
-                employee_id:employeeId
+        const getDataById = await prisma.employee.findFirst({
+            where: {
+                employee_id: employeeId
             }
-        })
+        });
         if (!getData || !getDataById) {
             return res.status(400).send('Employee data is not available');
         }
         return res.status(200).json(getData); // Return the data directly
-        return res.status(200).json(getDataById)
+        return res.status(200).json(getDataById);
     } catch (error) {
         console.error('Internal server error:', error);
         return res.status(500).send('Internal server error: ' + error.message);
     }
 };
 
- const fetchEmployeeDataById=async(req,res)=>{
-    const employeeId=req.params
+const fetchEmployeeDataById = async (req, res) => {
+    const employeeId = req.params.employeeId;
     try {
-        const getEmployeeData=await prisma.employee.findFirst({
-            where:{
-                employee_id:employeeId
+        const getEmployeeData = await prisma.employee.findFirst({
+            where: {
+                employee_id: employeeId
             }
-        })
-        if(!getEmployeeData){
-            return res.status(400).send('employee data not found')
+        });
+        if (!getEmployeeData) {
+            return res.status(400).send('employee data not found');
         }
-        return res.status(200).send(getEmployeeData)
+        return res.status(200).json(getEmployeeData);
     } catch (error) {
-        return res.status(500).send('Internal error'+error.message)
+        return res.status(500).send('Internal error' + error.message);
     }
- }
+};
 
 const uploadEmployeeFile = async (req, res) => {
-    const { email } = req.body;
-    const file = req.file;
+    const { email, employeeImg } = req.body;
 
-    if (!email || !file) {
-        return res.status(400).send('Email and file are required.');
+    if (!email || !employeeImg) {
+        return res.status(400).send('Email and image are required.');
     }
 
     try {
@@ -255,7 +244,7 @@ const uploadEmployeeFile = async (req, res) => {
         const updatedEmployee = await prisma.employee.update({
             where: { employee_id: existingEmployee.employee_id },
             data: {
-                employeeImg: file.path,
+                employeeImg: employeeImg,
             },
         });
 
@@ -266,6 +255,4 @@ const uploadEmployeeFile = async (req, res) => {
     }
 };
 
- 
-const uploadFile = upload.single('file');
-module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, fetchEmployeeDataById,uploadEmployeeFile, uploadFile };
+module.exports = { createEmployee, getEmployeeById, getAllEmployees, updateEmployee, deleteEmployee, fetchEmployeeDetails, fetchEmployeeDataById, uploadEmployeeFile };
