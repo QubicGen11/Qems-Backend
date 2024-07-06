@@ -29,8 +29,8 @@ app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
 app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 const corsOptions = {
-    // origin: 'http://localhost:5173',
-    origin: 'https://qubinest-frontend.vercel.app',
+    origin: 'http://localhost:5173',
+    // origin: 'https://qubinest-frontend.vercel.app',
     credentials: true, // This is required to allow credentials (cookies, headers)
 };
 
@@ -82,3 +82,5 @@ app.get("/test", (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+

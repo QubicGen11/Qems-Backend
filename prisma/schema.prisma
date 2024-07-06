@@ -21,10 +21,7 @@ model User {
   joiningDate DateTime? // New field for joining date
 }
 
-model EmployeeIdTracker {
-  id              Int  @id @default(autoincrement())
-  last_used_number Int @default(0)
-}
+
 
 model Employee {
   employee_id  String   @id
@@ -60,6 +57,12 @@ model Employee {
   teams Team[]
   employeeLeaves employeeLeaves[]
   
+}
+
+
+model EmployeeIdTracker {
+  id              Int  @id @default(autoincrement())
+  last_used_number Int @default(0)
 }
 
 model Attendance {
