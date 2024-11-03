@@ -49,8 +49,11 @@ const leaveRequestByDepartment=async(req,res)=>{
     }
 }
 const approveLeaveRequests = async (req, res) => {
-    const { companyEmail, employeeEmail } = req.body;
+    const { companyEmail, employeeEmail, leaveId } = req.body;
+    console.log('Approve request received:', { companyEmail, employeeEmail, leaveId });
+
     try {
+        // Verify admin/manager status
         const isAdmin = await prisma.user.findFirst({
             where: {
                 email: companyEmail,
@@ -60,27 +63,54 @@ const approveLeaveRequests = async (req, res) => {
                 ]
             }
         });
+
         if (!isAdmin) {
-            return res.status(400).send('Only admins can approve leave requests');
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized: Only managers or admins can approve leaves'
+            });
         }
-        const approveLeaves = await prisma.leaveRequests.updateMany({
+
+        // Update the leave request - Fixed the update query
+        const updatedLeave = await prisma.leaveRequests.update({
             where: {
-                employee_id: employeeEmail
+                leave_id: leaveId  // Make sure this matches your schema
             },
             data: {
-                status: 'Approved'
+                status: 'Approved'  // Consistent status string
             }
         });
-        return res.status(200).send(`leave approved for ${employeeEmail}`);
+
+        console.log('Updated leave:', updatedLeave); // Debug log
+
+        if (!updatedLeave) {
+            return res.status(400).json({
+                success: false,
+                message: 'No leave request found to approve'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Leave request approved successfully',
+            data: updatedLeave
+        });
     } catch (error) {
-        return res.status(500).send('Internal error: ' + error.message);
+        console.error('Error in approveLeaveRequests:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
     }
 };
 
-
 const declineLeaveRequests = async (req, res) => {
-    const { companyEmail, employeeEmail } = req.body;
+    const { companyEmail, employeeEmail, leaveId } = req.body;
+    console.log('Decline request received:', { companyEmail, employeeEmail, leaveId });
+
     try {
+        // Verify admin/manager status
         const isAdmin = await prisma.user.findFirst({
             where: {
                 email: companyEmail,
@@ -90,20 +120,45 @@ const declineLeaveRequests = async (req, res) => {
                 ]
             }
         });
+
         if (!isAdmin) {
-            return res.status(400).send('Only admins can approve leave requests');
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized: Only managers or admins can decline leaves'
+            });
         }
-        const declineLeaves = await prisma.leaveRequests.updateMany({
+
+        // Update the leave request - Fixed the update query
+        const updatedLeave = await prisma.leaveRequests.update({
             where: {
-                employee_id: employeeEmail
+                leave_id: leaveId  // Make sure this matches your schema
             },
             data: {
-                status: 'Declined'
+                status: 'Rejected'  // Consistent status string
             }
         });
-        return res.status(200).send(`leave declined for ${employeeEmail}`);
+
+        console.log('Updated leave:', updatedLeave); // Debug log
+
+        if (!updatedLeave) {
+            return res.status(400).json({
+                success: false,
+                message: 'No leave request found to decline'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Leave request declined successfully',
+            data: updatedLeave
+        });
     } catch (error) {
-        return res.status(500).send('Internal error: ' + error.message);
+        console.error('Error in declineLeaveRequests:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
     }
 };
 // const updateEmployeeLeaveBalance = async (req, res) => {
@@ -235,4 +290,5 @@ const allHolidays=async(req,res)=>{
         return res.status(500).send('Internal error: ' + error.message);
     }
 }
+module.exports={employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays}
 module.exports={employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays}
