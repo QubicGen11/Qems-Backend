@@ -30,8 +30,8 @@ app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 // Configure CORS
 app.use(cors({
-//   origin: 'http://localhost:5173',
- origin: 'https://qubinest-frontend.vercel.app',
+  origin: 'http://localhost:5173',
+//  origin: 'https://qubinest-frontend.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -39,7 +39,11 @@ app.use(cors({
 
 // Add request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${req.method} ${req.path}`, {
+    body: req.body,
+    query: req.query,
+    params: req.params
+  });
   next();
 });
 
@@ -85,6 +89,17 @@ app.use((err, req, res, next) => {
     error: 'Internal Server Error',
     message: err.message
   });
+});
+
+// Add this after all your routes
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+
 });
 
 // @starting app
