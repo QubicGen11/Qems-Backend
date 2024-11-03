@@ -28,14 +28,22 @@ const app = express();
 app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
 app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
-const corsOptions = {
-    // origin: 'http://localhost:5173',
-    origin: 'https://qubinest-frontend.vercel.app',
-    credentials: true, // This is required to allow credentials (cookies, headers)
-};
+// Configure CORS
+app.use(cors({
+//   origin: 'http://localhost:5173',
+ origin: 'https://qubinest-frontend.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // @middlewares
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/qubinest', authRouter);
 app.use('/qubinest', attendanceRoute);
@@ -70,6 +78,15 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 const PORT = process.env.PORT || 3000;
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message
+  });
+});
+
 // @starting app
 app.get("/", (req, res) => {
     res.send("API is working fine");
@@ -81,6 +98,5 @@ app.get("/test", (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
 });
-
-

@@ -5,12 +5,32 @@ const clockIn = async (req, res) => {
   try {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
+    
+    // Check if user exists
     const user = await prisma.user.findFirst({ where: { email } });
     if (!user) {
-      console.log('User not found.');
       return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
     }
 
+    // Check if user has already clocked in today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        companyEmail: email,
+        date: {
+          gte: today
+        },
+        checkout_Time: null
+      }
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({ message: 'Already clocked in today.' });
+    }
+
+    // Create new attendance record
     const attendance = await prisma.attendance.create({
       data: {
         employeeId: user.employeeId,
@@ -18,11 +38,17 @@ const clockIn = async (req, res) => {
         companyEmail: email,
         status: 'pending',
         employeeName: user.username,
-        joinDate: user.joiningDate
+        joinDate: user.joiningDate,
+        date: new Date()
       }
     });
-    console.log('Clock-in successful:', attendance);
-    return res.status(200).json({ message: 'Clock-in successful', attendance });
+
+    return res.status(200).json({ 
+      message: 'Clock-in successful', 
+      attendance,
+      isClockedIn: true,
+      clockInTime: attendance.checkin_Time 
+    });
   } catch (error) {
     console.error('Error clocking in:', error);
     return res.status(500).json({ error: error.message });
@@ -36,8 +62,7 @@ const employeeReport = async (req, res) => {
 
     const user = await prisma.user.findFirst({ where: { email } });
     if (!user) {
-      console.log('User not found.');
-      return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
+      return res.status(400).json({ message: 'User not found.' });
     }
 
     const latestAttendance = await prisma.attendance.findFirst({
@@ -51,25 +76,46 @@ const employeeReport = async (req, res) => {
     });
 
     if (!latestAttendance) {
-      console.log('No active clock-in record found for this user.');
-      return res.status(400).json({ message: 'No active clock-in record found for this user.' });
+      return res.status(400).json({ message: 'No active clock-in record found.' });
     }
+
+    // Extract media URLs from the rich content if needed
+    const mediaUrls = extractMediaUrls(reportText); // Implement this helper function
 
     const attendance = await prisma.attendance.update({
       where: {
         id: latestAttendance.id
       },
       data: {
-        reports: reportText
+        reports: reportText,
+        reportMedia: mediaUrls
       }
     });
 
-    console.log('Report submission successful:', attendance);
     return res.status(200).json({ message: 'Report submission successful', attendance });
   } catch (error) {
     console.error('Error submitting report:', error);
     return res.status(500).json({ error: error.message });
   }
+};
+
+// Helper function to extract media URLs
+const extractMediaUrls = (content) => {
+  const imgRegex = /<img[^>]+src="([^">]+)"/g;
+  const videoRegex = /<iframe[^>]+src="([^">]+)"/g;
+  
+  const urls = [];
+  let match;
+  
+  while ((match = imgRegex.exec(content)) !== null) {
+    urls.push(match[1]);
+  }
+  
+  while ((match = videoRegex.exec(content)) !== null) {
+    urls.push(match[1]);
+  }
+  
+  return urls;
 };
 
 const clockOut = async (req, res) => {
@@ -79,32 +125,43 @@ const clockOut = async (req, res) => {
 
     const user = await prisma.user.findFirst({ where: { email } });
     if (!user) {
-      console.log('User not found.');
-      return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
+      return res.status(400).json({ message: 'User not found.' });
     }
-    const latestAttendance = await prisma.attendance.findFirst({
+
+    // Find today's active attendance record
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const activeAttendance = await prisma.attendance.findFirst({
       where: {
         companyEmail: email,
-        checkout_Time: null // Find the latest record with no checkout time
-      },
-      orderBy: {
-        checkin_Time: 'desc'
+        date: {
+          gte: today
+        },
+        checkout_Time: null
       }
     });
-    if (!latestAttendance) {
-      console.log('No active clock-in record found for this user.');
-      return res.status(400).json({ message: 'No active clock-in record found for this user.' });
+
+    if (!activeAttendance) {
+      return res.status(400).json({ message: 'No active clock-in record found.' });
     }
+
+    // Update the attendance record with checkout time
     const attendance = await prisma.attendance.update({
       where: {
-        id: latestAttendance.id
+        id: activeAttendance.id
       },
       data: {
         checkout_Time: new Date()
       }
     });
-    console.log('Clock-out successful:', attendance);
-    return res.status(200).json({ message: 'Clock-out successful', attendance });
+
+    return res.status(200).json({ 
+      message: 'Clock-out successful', 
+      attendance,
+      isClockedIn: false,
+      clockOutTime: attendance.checkout_Time
+    });
   } catch (error) {
     console.error('Error clocking out:', error);
     return res.status(500).json({ error: error.message });
@@ -382,6 +439,45 @@ const declineSingleAttendance = async (req, res) => {
   }
 };
 
+// Add a new endpoint to check clock-in status
+const getClockStatus = async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        companyEmail: email,
+        date: {
+          gte: today
+        }
+      },
+      orderBy: {
+        checkin_Time: 'desc'
+      }
+    });
+
+    if (!attendance) {
+      return res.status(200).json({ 
+        isClockedIn: false,
+        clockInTime: null,
+        clockOutTime: null
+      });
+    }
+
+    return res.status(200).json({
+      isClockedIn: !attendance.checkout_Time,
+      clockInTime: attendance.checkin_Time,
+      clockOutTime: attendance.checkout_Time
+    });
+  } catch (error) {
+    console.error('Error getting clock status:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = { 
   clockIn, 
   clockOut, 
@@ -391,5 +487,6 @@ module.exports = {
   getAverageWorkingTime, 
   singleUserAttendance,
   approveSingleAttendance,
-  declineSingleAttendance
+  declineSingleAttendance,
+  getClockStatus
 };

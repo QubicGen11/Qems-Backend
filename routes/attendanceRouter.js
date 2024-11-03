@@ -1,13 +1,16 @@
-const express=require('express')
-const { clockIn,clockOut,getAttendance,employeeReport,getAllAttendance,getAverageWorkingTime, singleUserAttendance, approveSingleAttendance, declineSingleAttendance,  } = require('../controllers/attendanceController')
-const router=express.Router()
-router.post('/clockin',clockIn)
-router.post('/clockout',clockOut)
-router.post('/report',employeeReport)
-router.post('/approveAttendance',approveSingleAttendance)
-router.post('/declineAttendance',declineSingleAttendance)
-router.get('/attendance/:email',getAttendance)
-router.get('/allAttendance/:year?/:month?/:week?/:department?',getAllAttendance)
-router.get('/singleUserAttendance/:employeeId/:year?/:month?/:week?', singleUserAttendance);
-router.get('/allAttendance/:employeeId',getAverageWorkingTime)
-module.exports=router
+const express = require('express');
+const router = express.Router();
+const attendanceController = require('../controllers/attendanceController');
+
+router.post('/clockin', attendanceController.clockIn);
+router.post('/clockout', attendanceController.clockOut);
+router.post('/report', attendanceController.employeeReport);
+router.post('/approveAttendance', attendanceController.approveSingleAttendance);
+router.post('/declineAttendance', attendanceController.declineSingleAttendance);
+router.get('/attendance/:email', attendanceController.getAttendance);
+router.get('/allAttendance/:year?/:month?/:week?/:department?', attendanceController.getAllAttendance);
+router.get('/singleUserAttendance/:employeeId/:year?/:month?/:week?', attendanceController.singleUserAttendance);
+router.get('/allAttendance/:employeeId', attendanceController.getAverageWorkingTime);
+router.get('/clockstatus/:email', attendanceController.getClockStatus);
+
+module.exports = router;

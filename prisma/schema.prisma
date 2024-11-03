@@ -72,7 +72,8 @@ model Attendance {
   employeeName String?
   employeeImage String?
   status String?
-  reports String?
+  reports String? @db.Text
+  reportMedia String[]
   checkin_Time DateTime?
   checkout_Time DateTime?
   companyEmail String ?
