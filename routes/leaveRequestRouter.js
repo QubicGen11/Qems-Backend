@@ -1,5 +1,5 @@
 const express=require('express')
-const {employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays}=require('../controllers/holidayReqController')
+const {employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays,leaveRequestByEmail}=require('../controllers/holidayReqController')
 const router=express.Router()
 router.post('/newleaverequest',employeeLeaveRequest)
 router.get('/allleaverequests',allLeaveRequests)
@@ -8,4 +8,5 @@ router.post('/declineleaves',declineLeaveRequests)
 router.post('/createholiday',createNewHoliday)
 router.delete('/deleteholiday/:holidayName',deleteHoliday)
 router.get('/allholidays',allHolidays)
+router.get('/getleaverequests/:email',leaveRequestByEmail)
 module.exports=router

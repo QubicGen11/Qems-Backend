@@ -290,5 +290,28 @@ const allHolidays=async(req,res)=>{
         return res.status(500).send('Internal error: ' + error.message);
     }
 }
-module.exports={employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays}
-module.exports={employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays}
+
+const leaveRequestByEmail = async (req, res) => {
+    const { email } = req.params;
+    try {
+        const leaveRequests = await prisma.leaveRequests.findMany({
+            where: {
+                companyEmail: email
+            }
+        });
+
+        if (!leaveRequests.length) {
+            return res.status(404).json({ message: 'No leave requests found for this email' });
+        }
+
+        return res.status(200).json(leaveRequests);
+    } catch (error) {
+        console.error('Error fetching leave requests by email:', error);
+        return res.status(500).json({
+            error: 'Internal Server Error',
+            message: error.message
+        });
+    }
+};
+
+module.exports={employeeLeaveRequest,allLeaveRequests,approveLeaveRequests,declineLeaveRequests,createNewHoliday,deleteHoliday,allHolidays,leaveRequestByEmail}
