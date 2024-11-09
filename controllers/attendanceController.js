@@ -478,6 +478,110 @@ const getClockStatus = async (req, res) => {
   }
 };
 
+// Add endpoint to get daily clock status
+const getDailyClockStatus = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        companyEmail: email,
+        date: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+      }
+    });
+
+    res.json({
+      hasClockedInToday: !!attendance?.checkin_Time,
+      hasClockedOutToday: !!attendance?.checkout_Time,
+      clockInTime: attendance?.checkin_Time || null,
+      clockOutTime: attendance?.checkout_Time || null,
+      hasSubmittedReport: !!attendance?.reports
+    });
+  } catch (error) {
+    console.error('Error checking daily clock status:', error);
+    res.status(500).json({ message: 'Error checking daily clock status' });
+  }
+};
+
+const getTodaysAttendance = async (req, res) => {
+  try {
+    console.log('Starting getTodaysAttendance...');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    console.log('Fetching employees...');
+    // Get all employees with correct field names
+    const employees = await prisma.employee.findMany({
+      select: {
+        employee_id: true,
+        firstname: true,
+        lastname: true,
+        email: true,
+        department: true,
+        employeeImg: true, // Instead of profileImage
+      }
+    });
+
+    console.log(`Found ${employees.length} employees`);
+
+    // Get today's attendance records
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        date: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    console.log(`Found ${attendanceRecords.length} attendance records`);
+
+    // Combine the data with proper field mapping
+    const todaysAttendance = employees.map(employee => {
+      const attendance = attendanceRecords.find(
+        record => record.employeeId === employee.employee_id
+      );
+
+      return {
+        employeeId: employee.employee_id,
+        employeeName: `${employee.firstname} ${employee.lastname}`.trim(),
+        email: employee.email,
+        department: employee.department || 'N/A',
+        profileImage: employee.employeeImg,
+        checkin_Time: attendance?.checkin_Time || null,
+        checkout_Time: attendance?.checkout_Time || null,
+        status: attendance?.status || 'absent',
+        date: today
+      };
+    });
+
+    console.log('Successfully processed attendance data');
+    return res.status(200).json(todaysAttendance);
+
+  } catch (error) {
+    console.error('Detailed error in getTodaysAttendance:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    return res.status(500).json({ 
+      error: 'Internal Server Error',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
 module.exports = { 
   clockIn, 
   clockOut, 
@@ -488,5 +592,7 @@ module.exports = {
   singleUserAttendance,
   approveSingleAttendance,
   declineSingleAttendance,
-  getClockStatus
+  getClockStatus,
+  getDailyClockStatus,
+  getTodaysAttendance
 };

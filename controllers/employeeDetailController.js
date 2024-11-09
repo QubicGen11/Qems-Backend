@@ -143,7 +143,7 @@ const updateEmployee = async (req, res) => {
 
 const deleteEmployee = async (req, res) => {
     const { employeeId } = req.params;
-    console.log('Employee ID:', employeeId); // Debugging line
+    console.log('Employee ID:', employeeId);
     try {
         if (!employeeId) {
             return res.status(400).send('Employee ID is required');
@@ -151,23 +151,35 @@ const deleteEmployee = async (req, res) => {
 
         // Delete related attendance records
         await prisma.attendance.deleteMany({
-            where: { employee_id: employeeId }
+            where: { 
+                employee: {
+                    employee_id: employeeId
+                }
+            }
         });
 
         // Delete related salary records (if any)
         await prisma.salary.deleteMany({
-            where: { employee_id: employeeId }
+            where: { 
+                employee_id: employeeId  // Using employee_id as per schema
+            }
         });
 
         // Delete the employee record
         await prisma.employee.delete({
-            where: { employee_id: employeeId }
+            where: { 
+                employee_id: employeeId 
+            }
         });
 
-        res.status(204).send('Successfully deleted employee');
+        res.status(204).send();
     } catch (error) {
         console.error('Error deleting employee:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 

@@ -17,6 +17,7 @@ const leaveRequestRouter=require('./routes/leaveRequestRouter')
 const teamRouter=require('./routes/teamRouter')
 const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
+const notificationRoutes = require('./routes/notificationRoutes');
 const bodyParser = require('body-parser');
 
 dotenv.config();
@@ -30,8 +31,8 @@ app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 // Configure CORS
 app.use(cors({
-  // origin: 'http://localhost:5173',
- origin: 'https://qubinest-frontend.vercel.app',
+  origin: 'http://localhost:5173',
+//  origin: 'https://qubinest-frontend.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -60,6 +61,8 @@ app.use('/qubinest', leaveRequestRouter);
 app.use('/qubinest', teamRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
+// app.use('/qubinest' , notificationRoutes)
+app.use('/qubinest', notificationRoutes);
 
 app.use('/documents', documentRouter);
 // Set view engine to EJS
@@ -100,6 +103,27 @@ app.use((err, req, res, next) => {
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 
+});
+
+// Add this before your routes
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// Add this after your routes
+app.use((err, req, res, next) => {
+  console.error('Server Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+  
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
 
 // @starting app

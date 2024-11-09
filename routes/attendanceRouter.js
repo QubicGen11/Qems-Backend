@@ -12,5 +12,7 @@ router.get('/allAttendance/:year?/:month?/:week?/:department?', attendanceContro
 router.get('/singleUserAttendance/:employeeId/:year?/:month?/:week?', attendanceController.singleUserAttendance);
 router.get('/allAttendance/:employeeId', attendanceController.getAverageWorkingTime);
 router.get('/clockstatus/:email', attendanceController.getClockStatus);
+router.get('/daily-clock-status/:email', attendanceController.getDailyClockStatus);
+router.get('/todaysAttendance', attendanceController.getTodaysAttendance);
 
 module.exports = router;
