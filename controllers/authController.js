@@ -2,7 +2,18 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
+const nodemailer = require('nodemailer');
 const jwtSecret = process.env.jwtSecret;
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'qubicgen@gmail.com',
+    pass: 'krst npyz vhhk edtc'  // App password
+  }
+});
+
 
 const registerUser = async (req, res) => {
   try {
@@ -31,10 +42,72 @@ const registerUser = async (req, res) => {
       }
     });
 
-    res.status(201).json(newUser); // Use 201 for created
+    // Email template
+    const mailOptions = {
+      from: 'qubicgen@gmail.com',
+      to: email,
+      subject: 'Welcome to QubiNest - Registration Successful',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f8f8; padding: 20px;">
+            <img src="https://res.cloudinary.com/defsu5bfc/image/upload/v1715348582/og_6_jqnrvf.png" 
+                 alt="QubiNest Logo" 
+                 style="width: 150px; display: block; margin: 0 auto 20px;">
+            
+            <h1 style="color: #333; text-align: center; margin-bottom: 30px;">Welcome to QubiNest!</h1>
+            
+            <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h2 style="color: #666;">Hello ${username},</h2>
+              <p>Thank you for registering with QubiNest. Your account has been successfully created.</p>
+              
+              <h3 style="color: #333; margin-top: 20px;">Your Account Details:</h3>
+              <p><strong>Username:</strong> ${username}</p>
+              <p><strong>Password:</strong> ${password}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Position:</strong> ${mainPosition}</p>
+              <p><strong>Role:</strong> ${role}</p>
+              <p><strong>Joining Date:</strong> ${new Date(joiningDate).toLocaleDateString()}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="http://localhost:5173" 
+                 style="background-color: #fbbf24; color: black; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Login to Your Account
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; text-align: center;">
+              If you have any questions or need assistance, please don't hesitate to contact our support team.
+            </p>
+          </div>
+          
+          <div style="background-color: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>© ${new Date().getFullYear()} QubiNest. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send welcome email
+    await transporter.sendMail(mailOptions);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. Please check your email.',
+      user: {
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role
+      }
+    });
+
   } catch (error) {
     console.error('Error registering user:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      message: error.code === 'P2002' ? 'Email already exists' : 'Registration failed'
+    });
   }
 };
 
