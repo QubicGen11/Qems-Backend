@@ -496,11 +496,11 @@ const getDailyClockStatus = async (req, res) => {
     });
 
     res.json({
-      hasClockedInToday: !!attendance?.checkin_Time,
-      hasClockedOutToday: !!attendance?.checkout_Time,
-      clockInTime: attendance?.checkin_Time || null,
-      clockOutTime: attendance?.checkout_Time || null,
-      hasSubmittedReport: !!attendance?.reports
+      hasClockedInToday: attendance ? !!attendance.checkin_Time : false,
+      hasClockedOutToday: attendance ? !!attendance.checkout_Time : false,
+      clockInTime: attendance && attendance.checkin_Time ? attendance.checkin_Time : null,
+      clockOutTime: attendance && attendance.checkout_Time ? attendance.checkout_Time : null,
+      hasSubmittedReport: attendance ? !!attendance.reports : false
     });
   } catch (error) {
     console.error('Error checking daily clock status:', error);
@@ -519,7 +519,6 @@ const getTodaysAttendance = async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     console.log('Fetching employees...');
-    // Get all employees with correct field names
     const employees = await prisma.employee.findMany({
       select: {
         employee_id: true,
@@ -527,13 +526,12 @@ const getTodaysAttendance = async (req, res) => {
         lastname: true,
         email: true,
         department: true,
-        employeeImg: true, // Instead of profileImage
+        employeeImg: true,
       }
     });
 
     console.log(`Found ${employees.length} employees`);
 
-    // Get today's attendance records
     const attendanceRecords = await prisma.attendance.findMany({
       where: {
         date: {
@@ -545,7 +543,6 @@ const getTodaysAttendance = async (req, res) => {
 
     console.log(`Found ${attendanceRecords.length} attendance records`);
 
-    // Combine the data with proper field mapping
     const todaysAttendance = employees.map(employee => {
       const attendance = attendanceRecords.find(
         record => record.employeeId === employee.employee_id
@@ -557,9 +554,9 @@ const getTodaysAttendance = async (req, res) => {
         email: employee.email,
         department: employee.department || 'N/A',
         profileImage: employee.employeeImg,
-        checkin_Time: attendance?.checkin_Time || null,
-        checkout_Time: attendance?.checkout_Time || null,
-        status: attendance?.status || 'absent',
+        checkin_Time: attendance ? attendance.checkin_Time : null,
+        checkout_Time: attendance ? attendance.checkout_Time : null,
+        status: attendance ? attendance.status : 'absent',
         date: today
       };
     });
