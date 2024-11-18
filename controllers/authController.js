@@ -114,27 +114,41 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for:', email);
 
-    // Check if user exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email: email,
-      },
+    if (!email || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Email and password are required'
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        email: true,
+        password: true,
+        role: true,
+        status: true
+      }
     });
 
-    if (!existingUser) {
-      return res.status(400).send('User data is not present, please register to continue');
+    if (!user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid credentials'
+      });
     }
 
     // Compare the provided password with the stored hashed password
-    const isMatch = await bcrypt.compare(password, existingUser.password);
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(400).send('Please provide valid username and password');
     }
 
     // If password matches, generate a JWT token
-    // const jwtToken = jwt.sign({ id: existingUser.id, email: existingUser.email }, jwtSecret, {
+    // const jwtToken = jwt.sign({ id: user.id, email: user.email }, jwtSecret, {
     //   expiresIn: '2h',
     // });
 
@@ -143,8 +157,15 @@ const loginUser = async (req, res) => {
 
     return res.status(200).json({ message: 'Login successful' });
   } catch (error) {
-    console.error('Error logging in user:', error);
-    return res.status(500).send('Server error');
+    console.error('Login error:', {
+      message: error.message,
+      stack: error.stack
+    });
+    
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal server error during login'
+    });
   }
 };
 

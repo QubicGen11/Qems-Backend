@@ -23,7 +23,11 @@ const bodyParser = require('body-parser');
 dotenv.config();
 
 // @initializing prisma and express app
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['query', 'error', 'warn'],
+  errorFormat: 'minimal',
+  connectionLimit: 5
+});
 const app = express();
 
 app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
@@ -168,4 +172,31 @@ app.get("/test", (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
     console.log(`Server is running on port ${PORT}`);
     // console.log(`CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Gracefully shutdown
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received. Closing HTTP server...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// Memory management
+const used = process.memoryUsage();
+console.log('Memory usage:', {
+  rss: `${Math.round(used.rss / 1024 / 1024 * 100) / 100} MB`,
+  heapTotal: `${Math.round(used.heapTotal / 1024 / 1024 * 100) / 100} MB`,
+  heapUsed: `${Math.round(used.heapUsed / 1024 / 1024 * 100) / 100} MB`
 });

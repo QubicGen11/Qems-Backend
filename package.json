@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "build": "npm install && npx prisma generate"
-  },
+"scripts": {
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "dev": "nodemon server.js",  
+  "start": "node dist/server.js",  
+  "build": "babel . --out-dir dist --extensions \".ts,.js\"",  
+  "postinstall": "prisma generate"  
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
