@@ -31,22 +31,14 @@ app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 // Configure CORS
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:8085',
-
-    'https://qems.qubinest.com',
-    'https://qubinest-frontend.vercel.app',
-    'https://qemsbe.qubinest.com'
-  ],
+  origin: ['https://qems.qubinest.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-  exposedHeaders: ['Access-Control-Allow-Origin'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
 }));
+
+// Enable pre-flight for all routes
+app.options('*', cors());
 
 // Add CORS headers middleware for additional security
 app.use((req, res, next) => {
