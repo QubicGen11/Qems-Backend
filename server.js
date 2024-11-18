@@ -22,168 +22,58 @@ const bodyParser = require('body-parser');
 
 dotenv.config();
 
-// @initializing prisma and express app
+// Initialize Prisma with correct options
 const prisma = new PrismaClient({
   log: ['query', 'error', 'warn'],
   errorFormat: 'minimal',
-  connectionLimit: 5
 });
+
 const app = express();
 
-app.use(bodyParser.json({ limit: '2mb' })); // Adjust limit as needed
-app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
-
-// Configure CORS
-app.use(cors({
-  origin: ['https://qems.qubinest.com', 'https://qemsbe.qubinest.com', 'http://localhost:3000' , 'http://localhost:8085' , 'http://localhost:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-}));
-
-// Enable pre-flight for all routes
-app.options('*', cors());
-
-// Add CORS headers middleware for additional security
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
+// Error handling for Prisma
+prisma.$on('error', (e) => {
+  console.error('Prisma Error:', e);
 });
 
-// Add request logging middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, {
-    body: req.body,
-    query: req.query,
-    params: req.params
-  });
-  next();
-});
-
-// @middlewares
+// Middleware setup
 app.use(express.json());
-app.use('/qubinest', authRouter);
-app.use('/qubinest', attendanceRoute);
-app.use('/qubinest', employeeRouter);
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(cookieParser());
-app.use('/qubinest', reportRouter);
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://qems.qubinest.com'],
+  credentials: true
+}));
+
+// Routes
+app.use('/qubinest', authRouter);
 app.use('/qubinest', userAuthRouter);
+app.use('/qubinest', attendanceRoute);
+app.use('/qubinest', employeeRouter);
+app.use('/qubinest', reportRouter);
 app.use('/qubinest', leaveRequestRouter);
 app.use('/qubinest', teamRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
-// app.use('/qubinest' , notificationRoutes)
 app.use('/qubinest', notificationRoutes);
-
 app.use('/documents', documentRouter);
+
 // Set view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Dynamic route to render the requested document with employee data
-
-
-// API to save or update bank details
-
-
-// @prisma config
-async function shutdown() {
-    await prisma.$disconnect();
-    process.exit(0);
-}
-
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-const PORT = process.env.PORT || 3000;
-
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message
-  });
-});
-
-// Add this after all your routes
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({
-        error: 'Internal Server Error',
-        message: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-
-});
-
-// Add this before your routes
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
-
-// Add this after your routes
-app.use((err, req, res, next) => {
-  console.error('Server Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
-  
-  res.status(500).json({
-    error: 'Internal Server Error',
-    details: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
-});
-
-// Add error handling for uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Optionally log to a file or monitoring service
-});
-
-// Add better error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error details:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body
-  });
-  
+  console.error(err.stack);
   res.status(500).json({
     error: 'Internal Server Error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
-// @starting app
-app.get("/", (req, res) => {
-    res.send("API is working fine");
-});
-
-app.get("/test", (req, res) => {
-    res.send("This is a test");
-});
-
-app.listen(process.env.PORT || 3000, () => {
-    console.log(`Server is running on port ${PORT}`);
-    // console.log(`CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Gracefully shutdown
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 // Graceful shutdown
@@ -191,12 +81,4 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Closing HTTP server...');
   await prisma.$disconnect();
   process.exit(0);
-});
-
-// Memory management
-const used = process.memoryUsage();
-console.log('Memory usage:', {
-  rss: `${Math.round(used.rss / 1024 / 1024 * 100) / 100} MB`,
-  heapTotal: `${Math.round(used.heapTotal / 1024 / 1024 * 100) / 100} MB`,
-  heapUsed: `${Math.round(used.heapUsed / 1024 / 1024 * 100) / 100} MB`
 });

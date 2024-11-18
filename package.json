@@ -1,43 +1,36 @@
 {
   "name": "Qubinest-Backend",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "description": "",
   "main": "server.js",
-"scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "dev": "nodemon server.js",  
-  "start": "node dist/server.js",  
-  "build": "babel . --out-dir dist --extensions \".ts,.js\"",  
-  "postinstall": "prisma generate"  
-},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js",
+    "start": "node --version && node server.js",
+    "build": "npm install && npx prisma generate",
+    "clean": "rm -rf node_modules dist package-lock.json && npm cache clean --force",
+    "setup": "npm run clean && npm install && npx prisma generate"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fullcalendar/bootstrap5": "^6.1.15",
-    "@fullcalendar/daygrid": "^6.1.15",
-    "@fullcalendar/interaction": "^6.1.15",
-    "@fullcalendar/list": "^6.1.15",
-    "@fullcalendar/react": "^6.1.15",
-    "@fullcalendar/timegrid": "^6.1.15",
-    "@prisma/client": "^5.15.0",
-    "babel": "^5.8.38",
+    "@prisma/client": "5.15.0",
     "bcrypt": "^5.1.1",
-    "bootstrap-icons": "^1.11.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
     "express": "^4.19.2",
     "html-pdf": "^3.0.1",
     "jsonwebtoken": "^9.0.2",
-    "memcached": "^2.2.2",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {
-    "prisma": "^5.15.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "prisma": "5.15.0"
   }
 }
