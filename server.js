@@ -165,7 +165,7 @@ app.get("/test", (req, res) => {
     res.send("This is a test");
 });
 
-app.listen(PORT, () => {
+app.listen(process.env.PORT || 3000, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    // console.log(`CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
 });
