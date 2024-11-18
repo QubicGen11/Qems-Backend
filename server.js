@@ -31,7 +31,7 @@ app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); //
 
 // Configure CORS
 app.use(cors({
-  origin: ['https://qems.qubinest.com'],
+  origin: ['https://qems.qubinest.com', 'https://qemsbe.qubinest.com', 'http://localhost:3000' , 'http://localhost:8085' , 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
@@ -131,6 +131,28 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     error: 'Internal Server Error',
     details: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// Add error handling for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Optionally log to a file or monitoring service
+});
+
+// Add better error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error details:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    body: req.body
+  });
+  
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
