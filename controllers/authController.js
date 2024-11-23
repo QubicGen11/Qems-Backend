@@ -72,7 +72,7 @@ const registerUser = async (req, res) => {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="http://localhost:5173" 
+              <a href="https://qems.qubinest.com" 
                  style="background-color: #fbbf24; color: black; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 Login to Your Account
               </a>
