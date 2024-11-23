@@ -19,6 +19,7 @@ model User {
   salary Float? // New field for salary
   mainPosition String? // New field for main position
   joiningDate DateTime? // New field for joining date
+  department String? // Add this field
 }
 
 

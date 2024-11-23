@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, role, salary, mainPosition, joiningDate } = req.body;
+    const { username, email, password, role, salary, mainPosition, joiningDate, department } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingUser = await prisma.user.findFirst({
@@ -32,13 +32,14 @@ const registerUser = async (req, res) => {
 
     const newUser = await prisma.user.create({
       data: {
-        username: username,
-        email: email,
+        username,
+        email,
         password: hashedPassword,
-        role: role,
-        salary: salary,  // Add salary
-        mainPosition: mainPosition,  // Add main position
-        joiningDate: new Date(joiningDate)  // Add joining date and ensure it's a Date object
+        role,
+        salary: parseFloat(salary),
+        mainPosition,
+        department,
+        joiningDate: new Date(joiningDate)
       }
     });
 
@@ -65,6 +66,7 @@ const registerUser = async (req, res) => {
               <p><strong>Password:</strong> ${password}</p>
               <p><strong>Email:</strong> ${email}</p>
               <p><strong>Position:</strong> ${mainPosition}</p>
+              <p><strong>Department:</strong> ${department}</p>
               <p><strong>Role:</strong> ${role}</p>
               <p><strong>Joining Date:</strong> ${new Date(joiningDate).toLocaleDateString()}</p>
             </div>
@@ -98,7 +100,8 @@ const registerUser = async (req, res) => {
       user: {
         username: newUser.username,
         email: newUser.email,
-        role: newUser.role
+        role: newUser.role,
+        department: newUser.department
       }
     });
 
