@@ -1,10 +1,22 @@
-const express=require('express')
-const {registerUser, loginUser,logoutUser,getAllUsers,changePassword} = require('../controllers/authController')
+const express = require('express');
+const {
+    registerUser, 
+    loginUser,
+    logoutUser, 
+    getAllUsers,
+    changePassword,
+    verifyOTP,
+    resendOTP
+} = require('../controllers/authController');
 
-const router=express.Router()
-router.post('/register',registerUser)
-router.put('/changepassword',changePassword)
-router.post('/login',loginUser)
-router.post('/logout',logoutUser)
-router.get('/allusers',getAllUsers)
-module.exports=router
+const router = express.Router();
+
+router.post('/register', registerUser);
+router.post('/verify-otp', verifyOTP);
+router.post('/resend-otp', resendOTP);
+router.post('/login', loginUser);
+router.post('/logout', logoutUser);
+router.put('/changepassword', changePassword);
+router.get('/allusers', getAllUsers);
+
+module.exports = router;

@@ -241,3 +241,12 @@ model Notification {
 
   @@index([employeeId])
 }
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  otp       String
+  metadata  String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}

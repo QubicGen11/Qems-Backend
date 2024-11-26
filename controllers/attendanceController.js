@@ -6,8 +6,14 @@ const clockIn = async (req, res) => {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
     
-    // Check if user exists
-    const user = await prisma.user.findFirst({ where: { email } });
+    // Check if user exists with department info
+    const user = await prisma.user.findFirst({ 
+      where: { email },
+      include: {
+        employee: true // Include employee relation to get additional details
+      }
+    });
+
     if (!user) {
       return res.status(400).json({ message: 'User not found. Please login or register as a user.' });
     }
@@ -30,7 +36,7 @@ const clockIn = async (req, res) => {
       return res.status(400).json({ message: 'Already clocked in today.' });
     }
 
-    // Create new attendance record
+    // Create new attendance record with department
     const attendance = await prisma.attendance.create({
       data: {
         employeeId: user.employeeId,
@@ -39,7 +45,9 @@ const clockIn = async (req, res) => {
         status: 'pending',
         employeeName: user.username,
         joinDate: user.joiningDate,
-        date: new Date()
+        Department: user.department, // Add department from user
+        date: new Date(),
+        employeeImage: user.employee?.employeeImg || null // Add employee image if available
       }
     });
 
@@ -197,9 +205,18 @@ const getAllAttendance = async (req, res) => {
   const { employeeId, year, month, week } = req.params;
 
   try {
+    // First check if employee exists and get their details including user info
     const isEmployee = await prisma.employee.findFirst({
       where: {
         employee_id: employeeId
+      },
+      include: {
+        users: {
+          select: {
+            department: true,
+            mainPosition: true
+          }
+        }
       }
     });
 
@@ -223,24 +240,68 @@ const getAllAttendance = async (req, res) => {
     if (week && !isNaN(week)) {
       const firstDayOfYear = new Date(year, 0, 1);
       const firstDayOfWeek = new Date(firstDayOfYear);
-      firstDayOfWeek.setDate(firstDayOfYear.getDate() + (week - 1) * 7 - firstDayOfYear.getDay() + 1); // Ensure the week starts from Sunday
+      firstDayOfWeek.setDate(firstDayOfYear.getDate() + (week - 1) * 7 - firstDayOfYear.getDay() + 1);
       dateFilter.gte = firstDayOfWeek;
       dateFilter.lt = new Date(firstDayOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
       hasDateFilter = true;
     }
 
+    // Get attendance records with employee and user details
     const attendanceByEmployeeId = await prisma.attendance.findMany({
       where: {
         employeeId: employeeId,
         ...(hasDateFilter && { date: dateFilter })
+      },
+      include: {
+        employee: {
+          include: {
+            users: {
+              select: {
+                department: true,
+                mainPosition: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
         date: 'asc'
       }
     });
 
-    return res.status(200).send(attendanceByEmployeeId);
+    // Process the attendance records to include department
+    const processedAttendance = attendanceByEmployeeId.map(record => {
+      const department = record.employee?.users[0]?.department || 
+                        record.employee?.department || 
+                        record.Department || 
+                        'Not Assigned';
+      
+      const position = record.employee?.users[0]?.mainPosition || 
+                      record.employee?.position || 
+                      'Not Assigned';
+
+      return {
+        ...record,
+        department,
+        position,
+        // Remove nested objects to clean up the response
+        employee: undefined
+      };
+    });
+
+    console.log(`Found ${processedAttendance.length} attendance records for employee ${employeeId}`);
+    return res.status(200).json({
+      employeeDetails: {
+        id: isEmployee.employee_id,
+        name: `${isEmployee.firstname} ${isEmployee.lastname}`,
+        department: isEmployee.users[0]?.department || isEmployee.department || 'Not Assigned',
+        position: isEmployee.users[0]?.mainPosition || isEmployee.position || 'Not Assigned'
+      },
+      attendance: processedAttendance
+    });
+
   } catch (error) {
+    console.error('Error in getAllAttendance:', error);
     return res.status(500).send('Internal server error: ' + error.message);
   }
 };
@@ -518,7 +579,8 @@ const getTodaysAttendance = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    console.log('Fetching employees...');
+    // Fetch employees with user information
+    console.log('Fetching employees with user details...');
     const employees = await prisma.employee.findMany({
       select: {
         employee_id: true,
@@ -527,6 +589,11 @@ const getTodaysAttendance = async (req, res) => {
         email: true,
         department: true,
         employeeImg: true,
+        users: {
+          select: {
+            department: true
+          }
+        }
       }
     });
 
@@ -548,11 +615,14 @@ const getTodaysAttendance = async (req, res) => {
         record => record.employeeId === employee.employee_id
       );
 
+      // Use department from user if available, otherwise fall back to employee department
+      const department = employee.users[0]?.department || employee.department || 'N/A';
+
       return {
         employeeId: employee.employee_id,
         employeeName: `${employee.firstname} ${employee.lastname}`.trim(),
         email: employee.email,
-        department: employee.department || 'N/A',
+        department: department,
         profileImage: employee.employeeImg,
         checkin_Time: attendance ? attendance.checkin_Time : null,
         checkout_Time: attendance ? attendance.checkout_Time : null,
@@ -565,12 +635,7 @@ const getTodaysAttendance = async (req, res) => {
     return res.status(200).json(todaysAttendance);
 
   } catch (error) {
-    console.error('Detailed error in getTodaysAttendance:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
+    console.error('Detailed error in getTodaysAttendance:', error);
     return res.status(500).json({ 
       error: 'Internal Server Error',
       details: error.message,

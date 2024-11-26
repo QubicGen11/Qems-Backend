@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 const { PrismaClient } = require('@prisma/client');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
@@ -30,6 +31,17 @@ const prisma = new PrismaClient({
 
 const app = express();
 
+// Add session middleware BEFORE other middleware and routes
+app.use(session({
+  secret: 'your-secret-key', // Change this to a secure secret
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 15 * 60 * 1000 // 15 minutes
+  }
+}));
+
 // Error handling for Prisma
 prisma.$on('error', (e) => {
   console.error('Prisma Error:', e);
@@ -41,8 +53,10 @@ app.use(express.urlencoded({limit: '50mb', extended: true}));
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174','https://qems.qubinest.com'],
-  credentials: true
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Routes

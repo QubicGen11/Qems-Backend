@@ -14,89 +14,148 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Generate a random 6-digit OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 const registerUser = async (req, res) => {
   try {
     const { username, email, password, role, salary, mainPosition, joiningDate, department } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    
+    // Check if user already exists
     const existingUser = await prisma.user.findFirst({
-      where: {
-        email: email
-      }
+      where: { email }
     });
 
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const newUser = await prisma.user.create({
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Delete any existing OTP for this email
+    await prisma.oTP.deleteMany({
+      where: { email }
+    });
+
+    // Store registration data along with OTP
+    await prisma.oTP.create({
       data: {
-        username,
         email,
-        password: hashedPassword,
-        role,
-        salary: parseFloat(salary),
-        mainPosition,
-        department,
-        joiningDate: new Date(joiningDate)
+        otp,
+        expiresAt: otpExpiry,
+        // Store registration data as JSON string
+        metadata: JSON.stringify({
+          username,
+          password,
+          role,
+          salary,
+          mainPosition,
+          joiningDate,
+          department
+        })
       }
     });
 
-    // Email template
+    // Send OTP email
     const mailOptions = {
       from: 'qubicgen@gmail.com',
       to: email,
-      subject: 'Welcome to QubiNest - Registration Successful',
+      subject: 'QubiNest - Email Verification OTP',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background-color: #f8f8f8; padding: 20px;">
-            <img src="https://res.cloudinary.com/defsu5bfc/image/upload/v1715348582/og_6_jqnrvf.png" 
-                 alt="QubiNest Logo" 
-                 style="width: 150px; display: block; margin: 0 auto 20px;">
-            
-            <h1 style="color: #333; text-align: center; margin-bottom: 30px;">Welcome to QubiNest!</h1>
-            
-            <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <h2 style="color: #666;">Hello ${username},</h2>
-              <p>Thank you for registering with QubiNest. Your account has been successfully created.</p>
-              
-              <h3 style="color: #333; margin-top: 20px;">Your Account Details:</h3>
-              <p><strong>Username:</strong> ${username}</p>
-              <p><strong>Password:</strong> ${password}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Position:</strong> ${mainPosition}</p>
-              <p><strong>Department:</strong> ${department}</p>
-              <p><strong>Role:</strong> ${role}</p>
-              <p><strong>Joining Date:</strong> ${new Date(joiningDate).toLocaleDateString()}</p>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://qems.qubinest.com" 
-                 style="background-color: #fbbf24; color: black; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                Login to Your Account
-              </a>
-            </div>
-            
-            <p style="color: #666; font-size: 14px; text-align: center;">
-              If you have any questions or need assistance, please don't hesitate to contact our support team.
-            </p>
-          </div>
-          
-          <div style="background-color: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-            <p>This is an automated message, please do not reply to this email.</p>
-            <p>© ${new Date().getFullYear()} QubiNest. All rights reserved.</p>
-          </div>
+          <h2>Email Verification</h2>
+          <p>Your OTP for email verification is: <strong>${otp}</strong></p>
+          <p>This OTP will expire in 10 minutes.</p>
         </div>
       `
     };
 
-    // Send welcome email
     await transporter.sendMail(mailOptions);
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Registration successful. Please check your email.',
+      message: 'OTP sent to your email for verification'
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Registration failed',
+      error: error.message
+    });
+  }
+};
+
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
+      });
+    }
+
+    // Find the OTP record
+    const otpRecord = await prisma.oTP.findFirst({
+      where: {
+        email,
+        otp,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      });
+    }
+
+    // Parse the stored registration data
+    const registrationData = otpRecord.metadata ? JSON.parse(otpRecord.metadata) : null;
+
+    if (!registrationData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration data not found'
+      });
+    }
+
+    // Create the user
+    const hashedPassword = await bcrypt.hash(registrationData.password, 10);
+    const newUser = await prisma.user.create({
+      data: {
+        username: registrationData.username,
+        email: email,
+        password: hashedPassword,
+        role: registrationData.role,
+        salary: parseFloat(registrationData.salary),
+        mainPosition: registrationData.mainPosition,
+        department: registrationData.department,
+        joiningDate: new Date(registrationData.joiningDate),
+        status: 'Active'
+      }
+    });
+
+    // Delete the OTP record
+    await prisma.oTP.delete({
+      where: {
+        email: email
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email verified and registration completed successfully',
       user: {
         username: newUser.username,
         email: newUser.email,
@@ -106,12 +165,18 @@ const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ 
+    console.error('OTP verification error:', error);
+    return res.status(500).json({
       success: false,
-      message: error.code === 'P2002' ? 'Email already exists' : 'Registration failed'
+      message: 'OTP verification failed',
+      error: error.message
     });
   }
+};
+
+const resendOTP = async (req, res) => {
+  // Implementation for resending OTP
+  // Similar to the OTP generation part in registerUser
 };
 
 const loginUser = async (req, res) => {
@@ -132,7 +197,9 @@ const loginUser = async (req, res) => {
         email: true,
         password: true,
         role: true,
-        status: true
+        status: true,
+        department: true,
+        username: true
       }
     });
 
@@ -143,22 +210,23 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Compare the provided password with the stored hashed password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(400).send('Please provide valid username and password');
     }
 
-    // If password matches, generate a JWT token
-    // const jwtToken = jwt.sign({ id: user.id, email: user.email }, jwtSecret, {
-    //   expiresIn: '2h',
-    // });
+    return res.status(200).json({ 
+      message: 'Login successful',
+      user: {
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        username: user.username,
+        status: user.status
+      }
+    });
 
-    // // Set the token as a cookie in the response
-    // res.cookie('token', jwtToken, { httpOnly: true });
-
-    return res.status(200).json({ message: 'Login successful' });
   } catch (error) {
     console.error('Login error:', {
       message: error.message,
@@ -256,6 +324,7 @@ const changePassword = async (req, res) => {
     return res.status(500).send('Internal server error: ' + error.message);
   }
 };
+
 const getAllUsers=async(req,res)=>{
   try {
     const allUsers=await prisma.user.findMany({})
@@ -265,4 +334,4 @@ const getAllUsers=async(req,res)=>{
 
   }
 }
-module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers,changePassword };
+module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers,changePassword,verifyOTP,resendOTP };
