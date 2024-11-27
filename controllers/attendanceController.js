@@ -1,11 +1,53 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const dns = require('dns');
+const os = require('os');
+
+const isConnectedToCompanyWifi = async () => {
+  try {
+    const networkInterfaces = os.networkInterfaces();
+    const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0']; // Windows/Linux
+    
+    if (!wifi) return false;
+
+    // List of allowed company WiFi IP ranges (replace with your company's WiFi details)
+    const allowedNetworks = [
+      '192.168.1.0/24', // Example: Replace with your company WiFi subnet
+    ];
+
+    // Check if connected IP is in allowed range
+    const currentIP = wifi.find(interface => interface.family === 'IPv4')?.address;
+    
+    return allowedNetworks.some(network => {
+      const [networkAddr, subnet] = network.split('/');
+      const networkParts = networkAddr.split('.');
+      const currentParts = currentIP.split('.');
+      
+      // Compare first three octets for a /24 subnet
+      return networkParts[0] === currentParts[0] &&
+             networkParts[1] === currentParts[1] &&
+             networkParts[2] === currentParts[2];
+    });
+  } catch (error) {
+    console.error('Error checking WiFi connection:', error);
+    return false;
+  }
+};
 
 const clockIn = async (req, res) => {
   try {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
     
+    // Check if connected to company WiFi
+    const isCompanyWifi = await isConnectedToCompanyWifi();
+    if (!isCompanyWifi) {
+      return res.status(403).json({ 
+        message: 'Clock-in is only allowed when connected to company WiFi network.',
+        error: 'INVALID_NETWORK'
+      });
+    }
+
     // Check if user exists with department info
     const user = await prisma.user.findFirst({ 
       where: { email },
