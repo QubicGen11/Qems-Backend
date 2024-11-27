@@ -227,6 +227,13 @@ const loginUser = async (req, res) => {
       });
     }
 
+    if (user.status !== 'Active') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Account is disabled. Please contact admin.'
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -351,4 +358,29 @@ const getAllUsers=async(req,res)=>{
 
   }
 }
-module.exports = { registerUser, loginUser, logoutUser, resetPassword,getAllUsers,changePassword,verifyOTP,resendOTP };
+
+const updateUserStatus = async (req, res) => {
+  const { email, status } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await prisma.user.update({
+      where: { email },
+      data: { status }
+    });
+
+    return res.status(200).json({ message: `User status updated to ${status}` });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { registerUser, loginUser, logoutUser, resetPassword, getAllUsers, changePassword, verifyOTP, resendOTP, updateUserStatus };
