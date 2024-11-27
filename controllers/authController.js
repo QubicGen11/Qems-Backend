@@ -153,6 +153,23 @@ const verifyOTP = async (req, res) => {
       }
     });
 
+    // Send confirmation email
+    const confirmationMailOptions = {
+      from: 'qubicgen@gmail.com',
+      to: email,
+      subject: 'QubiNest - Registration Successful',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Welcome to QubiNest!</h2>
+          <p>Dear ${newUser.username},</p>
+          <p>Your registration was successful. You can now log in using your credentials.</p>
+          <p>Thank you for joining us!</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(confirmationMailOptions);
+
     return res.status(200).json({
       success: true,
       message: 'Email verified and registration completed successfully',

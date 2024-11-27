@@ -136,6 +136,7 @@ model LeaveType{
   Status String?
   Note String?
 }
+
 model Team {
   id             Int        @id @default(autoincrement())
   teamName       String?
