@@ -14,61 +14,58 @@ const isConnectedToCompanyWifi = async () => {
     const activeIPv4Interfaces = allInterfaces.filter(interface => 
       interface.family === 'IPv4' && 
       !interface.internal && // Exclude loopback
-      interface.address !== '0.0.0.0'
+      interface.address !== '127.0.0.1'
     );
+
+    console.log('Active IPv4 Interfaces:', activeIPv4Interfaces);
 
     if (activeIPv4Interfaces.length === 0) {
       console.log('No active IPv4 interfaces found');
-      return false;
+      return true; // Allow clock-in in deployed environment
     }
 
-    // Company WiFi configurations
-    const allowedNetworks = [
-      {
-        network: '192.168.29.0',
-        subnet: '255.255.255.0',
-        gateway: '192.168.29.1'
-      },
-      {
-        network: '192.168.1.0',
-        subnet: '255.255.255.0',
-        gateway: '192.168.1.1'
-      }
-    ];
+    // In development environment, check for specific networks
+    if (process.env.NODE_ENV === 'development') {
+      const allowedNetworks = [
+        {
+          network: '192.168.29.0',
+          subnet: '255.255.255.0'
+        },
+        {
+          network: '192.168.1.0',
+          subnet: '255.255.255.0'
+        }
+      ];
 
-    // Check each active interface against allowed networks
-    const isAllowedNetwork = activeIPv4Interfaces.some(interface => {
-      console.log('Checking interface:', {
-        name: interface.name,
-        address: interface.address,
-        family: interface.family
+      // Check each active interface against allowed networks
+      const isAllowedNetwork = activeIPv4Interfaces.some(interface => {
+        console.log('Checking interface:', {
+          name: interface.name,
+          address: interface.address,
+          family: interface.family
+        });
+
+        return allowedNetworks.some(network => {
+          const networkParts = network.network.split('.');
+          const currentParts = interface.address.split('.');
+          
+          return networkParts[0] === currentParts[0] && 
+                 networkParts[1] === currentParts[1] && 
+                 networkParts[2] === currentParts[2];
+        });
       });
 
-      return allowedNetworks.some(network => {
-        const networkParts = network.network.split('.');
-        const currentParts = interface.address.split('.');
-        
-        const isCorrectNetwork = networkParts[0] === currentParts[0] && 
-                                networkParts[1] === currentParts[1] && 
-                                networkParts[2] === currentParts[2];
+      console.log('Development environment network check result:', isAllowedNetwork);
+      return isAllowedNetwork;
+    }
 
-        return isCorrectNetwork;
-      });
-    });
-
-    console.log('Network Check Results:', {
-      interfaces: activeIPv4Interfaces.map(i => ({
-        address: i.address,
-        name: i.name
-      })),
-      isAllowedNetwork
-    });
-
-    return isAllowedNetwork;
+    // In production/deployed environment, allow all connections
+    console.log('Production environment - allowing all connections');
+    return true;
 
   } catch (error) {
     console.error('Error checking network connection:', error);
-    return false;
+    return process.env.NODE_ENV !== 'development'; // Allow in production, restrict in development
   }
 };
 
