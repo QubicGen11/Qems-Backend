@@ -129,3 +129,11 @@ app.use((req, res, next) => {
 
 // Enable trust proxy if you're behind a reverse proxy
 app.set('trust proxy', process.env.NODE_ENV === 'production');
+
+app.use((req, res, next) => {
+  // Add Azure's forwarded IP header if available
+  if (req.headers['x-azure-clientip']) {
+    req.headers['x-forwarded-for'] = req.headers['x-azure-clientip'];
+  }
+  next();
+});

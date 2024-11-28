@@ -5,29 +5,24 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get network interfaces
+    // Get all network interfaces
     const networkInterfaces = os.networkInterfaces();
-    const wifi = networkInterfaces['WiFi'];
+    console.log('Available interfaces:', Object.keys(networkInterfaces));
 
-    console.log('Debug - WiFi Interface:', wifi);
+    // Find all IPv4 interfaces that are not internal
+    const allIPv4Interfaces = Object.values(networkInterfaces)
+      .flat()
+      .filter(interface => 
+        interface.family === 'IPv4' && 
+        !interface.internal
+      );
 
-    if (!wifi) {
-      console.log('No WiFi interface found');
+    console.log('All IPv4 interfaces:', allIPv4Interfaces);
+
+    if (allIPv4Interfaces.length === 0) {
+      console.log('No IPv4 interfaces found');
       return false;
     }
-
-    // Get the IPv4 interface from WiFi
-    const ipv4Interface = wifi.find(interface => 
-      interface.family === 'IPv4' && 
-      !interface.internal
-    );
-
-    if (!ipv4Interface) {
-      console.log('No IPv4 interface found on WiFi');
-      return false;
-    }
-
-    console.log('Current WiFi IP:', ipv4Interface.address);
 
     // Company office network configurations
     const allowedNetworks = [
@@ -70,22 +65,45 @@ const isConnectedToCompanyWifi = async (req) => {
       }
     };
 
-    // Check if current WiFi IP is in allowed networks
-    const matchedNetwork = allowedNetworks.find(network => 
-      isInSubnet(ipv4Interface.address, network)
-    );
+    // Check if any interface is in allowed networks
+    for (const interface of allIPv4Interfaces) {
+      console.log(`Checking interface: ${interface.address}`);
+      
+      const matchedNetwork = allowedNetworks.find(network => 
+        isInSubnet(interface.address, network)
+      );
 
-    if (matchedNetwork) {
-      console.log(`Connected to allowed network: ${matchedNetwork.description}`);
-      console.log(`IP: ${ipv4Interface.address}, Gateway: ${matchedNetwork.gateway}`);
-      return true;
+      if (matchedNetwork) {
+        console.log(`Connected to allowed network: ${matchedNetwork.description}`);
+        console.log(`IP: ${interface.address}, Gateway: ${matchedNetwork.gateway}`);
+        return true;
+      }
     }
 
-    console.log(`IP ${ipv4Interface.address} is not in any allowed network`);
+    // If we're in production, also check the client's IP
+    if (process.env.NODE_ENV === 'production') {
+      const clientIP = 
+        req.headers['x-forwarded-for']?.split(',')[0] || 
+        req.headers['x-real-ip'] || 
+        req.connection.remoteAddress?.replace(/^::ffff:/, '');
+
+      console.log('Checking client IP:', clientIP);
+
+      const matchedNetwork = allowedNetworks.find(network => 
+        isInSubnet(clientIP, network)
+      );
+
+      if (matchedNetwork) {
+        console.log(`Client IP matched allowed network: ${matchedNetwork.description}`);
+        return true;
+      }
+    }
+
+    console.log('No allowed networks found');
     return false;
 
   } catch (error) {
-    console.error('Error checking WiFi connection:', error);
+    console.error('Error checking network connection:', error);
     console.error('Stack:', error.stack);
     return false;
   }
