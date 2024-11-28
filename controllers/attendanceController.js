@@ -6,66 +6,54 @@ const os = require('os');
 const isConnectedToCompanyWifi = async () => {
   try {
     const networkInterfaces = os.networkInterfaces();
+    const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0']; // Windows/Linux WiFi adapter
     
-    // Get all available network interfaces
-    const allInterfaces = Object.values(networkInterfaces).flat();
-    
-    // Find any active IPv4 interface
-    const activeIPv4Interfaces = allInterfaces.filter(interface => 
-      interface.family === 'IPv4' && 
-      !interface.internal && // Exclude loopback
-      interface.address !== '127.0.0.1'
-    );
-
-    console.log('Active IPv4 Interfaces:', activeIPv4Interfaces);
-
-    if (activeIPv4Interfaces.length === 0) {
-      console.log('No active IPv4 interfaces found');
-      return true; // Allow clock-in in deployed environment
+    if (!wifi) {
+      console.log('WiFi adapter not found');
+      return false;
     }
 
-    // In development environment, check for specific networks
-    if (process.env.NODE_ENV === 'development') {
-      const allowedNetworks = [
-        {
-          network: '192.168.29.0',
-          subnet: '255.255.255.0'
-        },
-        {
-          network: '192.168.1.0',
-          subnet: '255.255.255.0'
-        }
-      ];
-
-      // Check each active interface against allowed networks
-      const isAllowedNetwork = activeIPv4Interfaces.some(interface => {
-        console.log('Checking interface:', {
-          name: interface.name,
-          address: interface.address,
-          family: interface.family
-        });
-
-        return allowedNetworks.some(network => {
-          const networkParts = network.network.split('.');
-          const currentParts = interface.address.split('.');
-          
-          return networkParts[0] === currentParts[0] && 
-                 networkParts[1] === currentParts[1] && 
-                 networkParts[2] === currentParts[2];
-        });
-      });
-
-      console.log('Development environment network check result:', isAllowedNetwork);
-      return isAllowedNetwork;
+    // Get IPv4 interface
+    const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
+    if (!ipv4Interface) {
+      console.log('No IPv4 interface found');
+      return false;
     }
 
-    // In production/deployed environment, allow all connections
-    console.log('Production environment - allowing all connections');
-    return true;
+    // Strict company WiFi configurations
+    const allowedNetworks = [
+      {
+        network: '192.168.29',  // First three octets only
+        gateway: '192.168.29.1'
+      },
+      {
+        network: '192.168.1',   // First three octets only
+        gateway: '192.168.1.1'
+      }
+    ];
+
+    const currentIP = ipv4Interface.address;
+    console.log('Current IP:', currentIP);
+
+    // Check if IP matches allowed networks
+    const isAllowed = allowedNetworks.some(network => {
+      const isInNetwork = currentIP.startsWith(network.network);
+      if (isInNetwork) {
+        console.log(`IP ${currentIP} matches allowed network ${network.network}`);
+        return true;
+      }
+      return false;
+    });
+
+    if (!isAllowed) {
+      console.log(`IP ${currentIP} is not in allowed networks`);
+    }
+
+    return isAllowed;
 
   } catch (error) {
-    console.error('Error checking network connection:', error);
-    return process.env.NODE_ENV !== 'development'; // Allow in production, restrict in development
+    console.error('Error checking WiFi connection:', error);
+    return false;
   }
 };
 
