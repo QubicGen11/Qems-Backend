@@ -137,3 +137,16 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Add middleware to handle IP forwarding
+app.use((req, res, next) => {
+  // Log all possible IP sources
+  console.log('IP Debug:', {
+    originalIp: req.ip,
+    forwardedFor: req.headers['x-forwarded-for'],
+    realIp: req.headers['x-real-ip'],
+    clientIp: req.headers['x-client-ip'],
+    remoteAddr: req.connection.remoteAddress
+  });
+  next();
+});
