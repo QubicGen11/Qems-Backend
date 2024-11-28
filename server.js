@@ -104,3 +104,19 @@ app.use((req, res, next) => {
   console.log('Remote Address:', req.connection.remoteAddress);
   next();
 });
+
+// Add these middleware before your routes
+app.use((req, res, next) => {
+  // Log all relevant IP information
+  console.log({
+    ip: req.ip,
+    ips: req.ips,
+    'x-forwarded-for': req.headers['x-forwarded-for'],
+    'x-real-ip': req.headers['x-real-ip'],
+    remoteAddress: req.connection.remoteAddress
+  });
+  next();
+});
+
+// Enable trust proxy if you're behind a reverse proxy
+app.set('trust proxy', process.env.NODE_ENV === 'production');
