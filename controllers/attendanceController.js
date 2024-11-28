@@ -5,85 +5,65 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Check if we're in production/server environment
-    if (process.env.NODE_ENV === 'production') {
-      // Get the client's IP address from the request headers
-      const clientIP = req.headers['x-forwarded-for'] || 
-                      req.connection.remoteAddress || 
-                      req.socket.remoteAddress;
-      
-      console.log('Client IP:', clientIP);
+    // Get client IP from various possible headers
+    const clientIP = 
+      req.headers['x-forwarded-for']?.split(',')[0] || 
+      req.headers['x-real-ip'] || 
+      req.connection.remoteAddress || 
+      req.socket.remoteAddress;
 
-      // Strict company WiFi configurations
-      const allowedNetworks = [
-        {
-          network: '192.168.29',
-          gateway: '192.168.29.1'
-        },
-        {
-          network: '192.168.1',
-          gateway: '192.168.1.1'
-        }
-      ];
+    console.log('Raw Client IP:', clientIP);
 
-      const isAllowed = allowedNetworks.some(network => {
-        const isInNetwork = clientIP.startsWith(network.network);
-        if (isInNetwork) {
-          console.log(`Client IP ${clientIP} matches allowed network ${network.network}`);
-          return true;
-        }
-        return false;
-      });
+    // Clean the IP address (remove IPv6 prefix if present)
+    const cleanIP = clientIP.replace(/^::ffff:/, '');
+    console.log('Cleaned Client IP:', cleanIP);
 
-      if (!isAllowed) {
-        console.log(`Client IP ${clientIP} is not in allowed networks`);
+    // Define allowed networks with proper CIDR notation
+    const allowedNetworks = [
+      {
+        cidr: '192.168.29.0/24',
+        gateway: '192.168.29.1',
+        description: 'Office Network 1'
+      },
+      {
+        cidr: '192.168.1.0/24',
+        gateway: '192.168.1.1',
+        description: 'Office Network 2'
       }
+    ];
 
-      return isAllowed;
+    // Function to check if IP is in subnet
+    const isInSubnet = (ip, cidr) => {
+      const [network, bits] = cidr.split('/');
+      const mask = parseInt(bits);
+      
+      const ip_addr = ip.split('.').map(Number);
+      const net_addr = network.split('.').map(Number);
+      
+      const ip_binary = ip_addr.reduce((acc, octet) => acc * 256 + octet, 0);
+      const net_binary = net_addr.reduce((acc, octet) => acc * 256 + octet, 0);
+      
+      const mask_binary = ~((1 << (32 - mask)) - 1);
+      
+      return (ip_binary & mask_binary) === (net_binary & mask_binary);
+    };
 
+    // Check if client IP is in any allowed network
+    const matchedNetwork = allowedNetworks.find(network => 
+      isInSubnet(cleanIP, network.cidr)
+    );
+
+    if (matchedNetwork) {
+      console.log(`IP ${cleanIP} matched network: ${matchedNetwork.description}`);
+      return true;
     } else {
-      // Local development environment check
-      const networkInterfaces = os.networkInterfaces();
-      const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0'];
-      
-      if (!wifi) {
-        console.log('WiFi adapter not found');
-        return false;
-      }
-
-      const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
-      if (!ipv4Interface) {
-        console.log('No IPv4 interface found');
-        return false;
-      }
-
-      const currentIP = ipv4Interface.address;
-      console.log('Current IP:', currentIP);
-
-      const allowedNetworks = [
-        {
-          network: '192.168.29',
-          gateway: '192.168.29.1'
-        },
-        {
-          network: '192.168.1',
-          gateway: '192.168.1.1'
-        }
-      ];
-
-      const isAllowed = allowedNetworks.some(network => 
-        currentIP.startsWith(network.network)
-      );
-
-      if (!isAllowed) {
-        console.log(`IP ${currentIP} is not in allowed networks`);
-      }
-
-      return isAllowed;
+      console.log(`IP ${cleanIP} did not match any allowed networks`);
+      return false;
     }
 
   } catch (error) {
-    console.error('Error checking WiFi connection:', error);
+    console.error('Error in network validation:', error);
+    console.error('Stack:', error.stack);
     return false;
   }
 };
@@ -93,7 +73,7 @@ const clockIn = async (req, res) => {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
     
-    // Pass the request object to isConnectedToCompanyWifi
+    // Check if connected to company WiFi
     const isCompanyWifi = await isConnectedToCompanyWifi(req);
     if (!isCompanyWifi) {
       return res.status(403).json({ 

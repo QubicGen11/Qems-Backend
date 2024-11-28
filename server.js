@@ -98,3 +98,9 @@ process.on('SIGTERM', async () => {
 });
 
 app.set('trust proxy', true);
+app.use((req, res, next) => {
+  console.log('Request IP:', req.ip);
+  console.log('X-Forwarded-For:', req.headers['x-forwarded-for']);
+  console.log('Remote Address:', req.connection.remoteAddress);
+  next();
+});
