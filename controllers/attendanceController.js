@@ -6,28 +6,66 @@ const os = require('os');
 const isConnectedToCompanyWifi = async () => {
   try {
     const networkInterfaces = os.networkInterfaces();
-    const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0']; // Windows/Linux
+    const wifi = networkInterfaces['WiFi'];
     
-    if (!wifi) return false;
+    if (!wifi) {
+      console.log('WiFi adapter not found');
+      return false;
+    }
 
-    // List of allowed company WiFi IP ranges (replace with your company's WiFi details)
+    const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
+    const ipv6Interface = wifi.find(interface => interface.family === 'IPv6');
+
+    if (!ipv4Interface) {
+      console.log('No IPv4 interface found');
+      return false;
+    }
+
+    console.log('Current IPv4:', ipv4Interface.address);
+    if (ipv6Interface) {
+      console.log('Current IPv6:', ipv6Interface.address);
+    }
+
+    // Company WiFi configurations
     const allowedNetworks = [
-      '192.168.1.0/24', // Example: Replace with your company WiFi subnet
+      {
+        network: '192.168.29.0',
+        subnet: '255.255.255.0',
+        gateway: '192.168.29.1',
+        ipv6Prefix: '2405:201:c052:1888'
+      },
+      {
+        network: '192.168.1.0',
+        subnet: '255.255.255.0',
+        gateway: '192.168.1.1',
+        ipv6Prefix: '2401:4900:1cb0:2fb0'
+      }
     ];
 
-    // Check if connected IP is in allowed range
-    const currentIP = wifi.find(interface => interface.family === 'IPv4')?.address;
-    
-    return allowedNetworks.some(network => {
-      const [networkAddr, subnet] = network.split('/');
-      const networkParts = networkAddr.split('.');
-      const currentParts = currentIP.split('.');
+    // Check if connected to any of the allowed networks
+    const isAllowedNetwork = allowedNetworks.some(network => {
+      const networkParts = network.network.split('.');
+      const currentParts = ipv4Interface.address.split('.');
       
-      // Compare first three octets for a /24 subnet
-      return networkParts[0] === currentParts[0] &&
-             networkParts[1] === currentParts[1] &&
-             networkParts[2] === currentParts[2];
+      const isCorrectIPv4Network = networkParts[0] === currentParts[0] && 
+                                  networkParts[1] === currentParts[1] && 
+                                  networkParts[2] === currentParts[2];
+
+      const hasCorrectGateway = ipv4Interface.address.startsWith(`${networkParts[0]}.${networkParts[1]}.${networkParts[2]}.`);
+
+      return isCorrectIPv4Network && hasCorrectGateway;
     });
+
+    // Log connection details for debugging
+    console.log('Connection Check Results:', {
+      interface: 'WiFi',
+      currentIPv4: ipv4Interface.address,
+      currentIPv6: ipv6Interface?.address,
+      isAllowedNetwork
+    });
+
+    return isAllowedNetwork;
+
   } catch (error) {
     console.error('Error checking WiFi connection:', error);
     return false;
