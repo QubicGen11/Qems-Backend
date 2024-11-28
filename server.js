@@ -187,3 +187,22 @@ app.use((req, res, next) => {
   console.log('Network Debug Info:', networkInfo);
   next();
 });
+
+// Add detailed logging middleware
+app.use((req, res, next) => {
+  const networkInfo = {
+    environment: process.env.NODE_ENV,
+    serverPublicIP: '74.179.60.127',
+    clientIP: req.headers['x-real-ip'] || 
+              req.headers['x-forwarded-for']?.split(',')[0] || 
+              req.connection.remoteAddress?.replace(/^::ffff:/, ''),
+    headers: {
+      'x-real-ip': req.headers['x-real-ip'],
+      'x-forwarded-for': req.headers['x-forwarded-for'],
+      'remote-addr': req.connection.remoteAddress
+    }
+  };
+  
+  console.log('Network Debug Info:', networkInfo);
+  next();
+});

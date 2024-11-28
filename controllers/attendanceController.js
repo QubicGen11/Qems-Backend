@@ -5,42 +5,33 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get all network interfaces first
-    const networkInterfaces = os.networkInterfaces();
-    console.log('Available Network Interfaces:', networkInterfaces);
+    // Server configurations
+    const serverConfig = {
+      publicIP: '74.179.60.127',
+      privateIP: '10.0.0.4',
+      allowedNetworks: [
+        {
+          cidr: '192.168.1.0/24',
+          subnet: '255.255.255.0',
+          gateway: '192.168.1.1',
+          description: 'Office Network 1'
+        },
+        {
+          cidr: '192.168.29.0/24',
+          subnet: '255.255.255.0',
+          gateway: '192.168.29.1',
+          description: 'Office Network 2'
+        }
+      ]
+    };
 
-    // Get all IPv4 interfaces
-    const serverIPs = Object.values(networkInterfaces)
-      .flat()
-      .filter(interface => 
-        interface.family === 'IPv4' && 
-        !interface.internal
-      )
-      .map(interface => interface.address);
+    // Get client IP
+    const clientIP = 
+      req.headers['x-real-ip'] || 
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+      req.connection.remoteAddress?.replace(/^::ffff:/, '');
 
-    console.log('Server IPs:', serverIPs);
-
-    // Define allowed networks including Azure internal network
-    const allowedNetworks = [
-      {
-        cidr: '192.168.1.0/16',
-        subnet: '255.255.255.0',
-        gateway: '192.168.1.1',
-        description: 'Office Network 1'
-      },
-      {
-        cidr: '192.168.29.0/16',
-        subnet: '255.255.255.0',
-        gateway: '192.168.29.1',
-        description: 'Office Network 2'
-      },
-      // Add Azure internal network
-      {
-        cidr: '10.0.0.0/16',
-        subnet: '255.255.255.0',
-        description: 'Azure Internal Network'
-      }
-    ];
+    console.log('Client IP:', clientIP);
 
     // Function to check if IP is in subnet
     const isInSubnet = (ip, network) => {
@@ -70,40 +61,50 @@ const isConnectedToCompanyWifi = async (req) => {
       }
     };
 
-    // First check if server is in allowed network
-    const isServerInAllowedNetwork = serverIPs.some(ip => 
-      allowedNetworks.some(network => isInSubnet(ip, network))
-    );
-
-    if (isServerInAllowedNetwork) {
-      console.log('Server is in allowed network');
+    // Check if we're running locally
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Development environment detected');
       
-      // If server is in allowed network, check client IP
-      const clientIP = 
-        req.headers['x-real-ip'] || 
-        req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-        req.connection.remoteAddress?.replace(/^::ffff:/, '');
+      const networkInterfaces = os.networkInterfaces();
+      const localIPs = Object.values(networkInterfaces)
+        .flat()
+        .filter(interface => 
+          interface.family === 'IPv4' && 
+          !interface.internal
+        );
 
-      console.log('Client IP:', clientIP);
+      // Check if any local interface is in allowed networks
+      const isLocalAllowed = localIPs.some(interface => 
+        serverConfig.allowedNetworks.some(network => 
+          isInSubnet(interface.address, network)
+        )
+      );
 
-      // If client IP is from internal network, allow it
-      const isClientInAllowedNetwork = allowedNetworks.some(network => 
+      if (isLocalAllowed) {
+        console.log('Local development - allowed network');
+        return true;
+      }
+    } else {
+      console.log('Production environment detected');
+      
+      // In production, strictly check if client is from allowed networks
+      const isAllowed = serverConfig.allowedNetworks.some(network => 
         isInSubnet(clientIP, network)
       );
 
-      if (isClientInAllowedNetwork) {
-        console.log('Client is in allowed network');
+      if (isAllowed) {
+        console.log(`Client IP ${clientIP} is from allowed network`);
         return true;
       }
 
-      // If server is in Azure network, we'll trust the connection
-      if (serverIPs.some(ip => isInSubnet(ip, allowedNetworks[2]))) {
-        console.log('Server is in Azure network, allowing connection');
+      // If client IP matches server's public IP, allow it
+      if (clientIP === serverConfig.publicIP) {
+        console.log('Client IP matches server public IP');
         return true;
       }
     }
 
-    console.log('Not in allowed network');
+    console.log(`Access denied for IP: ${clientIP}`);
     return false;
 
   } catch (error) {
