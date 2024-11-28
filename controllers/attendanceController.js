@@ -3,53 +3,84 @@ const prisma = new PrismaClient();
 const dns = require('dns');
 const os = require('os');
 
-const isConnectedToCompanyWifi = async () => {
+const isConnectedToCompanyWifi = async (req) => {
   try {
-    const networkInterfaces = os.networkInterfaces();
-    const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0']; // Windows/Linux WiFi adapter
-    
-    if (!wifi) {
-      console.log('WiFi adapter not found');
-      return false;
-    }
+    // Check if we're in production/server environment
+    if (process.env.NODE_ENV === 'production') {
+      // Get the client's IP address from the request headers
+      const clientIP = req.headers['x-forwarded-for'] || 
+                      req.connection.remoteAddress || 
+                      req.socket.remoteAddress;
+      
+      console.log('Client IP:', clientIP);
 
-    // Get IPv4 interface
-    const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
-    if (!ipv4Interface) {
-      console.log('No IPv4 interface found');
-      return false;
-    }
+      // Strict company WiFi configurations
+      const allowedNetworks = [
+        {
+          network: '192.168.29',
+          gateway: '192.168.29.1'
+        },
+        {
+          network: '192.168.1',
+          gateway: '192.168.1.1'
+        }
+      ];
 
-    // Strict company WiFi configurations
-    const allowedNetworks = [
-      {
-        network: '192.168.29',  // First three octets only
-        gateway: '192.168.29.1'
-      },
-      {
-        network: '192.168.1',   // First three octets only
-        gateway: '192.168.1.1'
+      const isAllowed = allowedNetworks.some(network => {
+        const isInNetwork = clientIP.startsWith(network.network);
+        if (isInNetwork) {
+          console.log(`Client IP ${clientIP} matches allowed network ${network.network}`);
+          return true;
+        }
+        return false;
+      });
+
+      if (!isAllowed) {
+        console.log(`Client IP ${clientIP} is not in allowed networks`);
       }
-    ];
 
-    const currentIP = ipv4Interface.address;
-    console.log('Current IP:', currentIP);
+      return isAllowed;
 
-    // Check if IP matches allowed networks
-    const isAllowed = allowedNetworks.some(network => {
-      const isInNetwork = currentIP.startsWith(network.network);
-      if (isInNetwork) {
-        console.log(`IP ${currentIP} matches allowed network ${network.network}`);
-        return true;
+    } else {
+      // Local development environment check
+      const networkInterfaces = os.networkInterfaces();
+      const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0'];
+      
+      if (!wifi) {
+        console.log('WiFi adapter not found');
+        return false;
       }
-      return false;
-    });
 
-    if (!isAllowed) {
-      console.log(`IP ${currentIP} is not in allowed networks`);
+      const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
+      if (!ipv4Interface) {
+        console.log('No IPv4 interface found');
+        return false;
+      }
+
+      const currentIP = ipv4Interface.address;
+      console.log('Current IP:', currentIP);
+
+      const allowedNetworks = [
+        {
+          network: '192.168.29',
+          gateway: '192.168.29.1'
+        },
+        {
+          network: '192.168.1',
+          gateway: '192.168.1.1'
+        }
+      ];
+
+      const isAllowed = allowedNetworks.some(network => 
+        currentIP.startsWith(network.network)
+      );
+
+      if (!isAllowed) {
+        console.log(`IP ${currentIP} is not in allowed networks`);
+      }
+
+      return isAllowed;
     }
-
-    return isAllowed;
 
   } catch (error) {
     console.error('Error checking WiFi connection:', error);
@@ -62,8 +93,8 @@ const clockIn = async (req, res) => {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
     
-    // Check if connected to company WiFi
-    const isCompanyWifi = await isConnectedToCompanyWifi();
+    // Pass the request object to isConnectedToCompanyWifi
+    const isCompanyWifi = await isConnectedToCompanyWifi(req);
     if (!isCompanyWifi) {
       return res.status(403).json({ 
         message: 'Clock-in is only allowed when connected to company WiFi network.',

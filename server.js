@@ -96,3 +96,5 @@ process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+
+app.set('trust proxy', true);
