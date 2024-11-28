@@ -150,3 +150,22 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+// Middleware to validate and clean IP addresses
+app.use((req, res, next) => {
+  const clientIP = 
+    req.headers['x-real-ip'] || 
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+    req.connection.remoteAddress?.replace(/^::ffff:/, '');
+
+  console.log('IP Validation:', {
+    originalIP: req.connection.remoteAddress,
+    forwardedFor: req.headers['x-forwarded-for'],
+    realIP: req.headers['x-real-ip'],
+    cleanedIP: clientIP
+  });
+
+  // Store cleaned IP for later use
+  req.clientIP = clientIP;
+  next();
+});

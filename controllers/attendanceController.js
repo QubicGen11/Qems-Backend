@@ -5,16 +5,15 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get client IP first
+    // Get client IP from headers
     const clientIP = 
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
       req.headers['x-real-ip'] || 
-      req.headers['x-client-ip'] || 
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
       req.connection.remoteAddress?.replace(/^::ffff:/, '');
 
-    console.log('Client IP:', clientIP);
+    console.log('Original Client IP:', clientIP);
 
-    // Company office network configurations
+    // Strict office network configurations
     const allowedNetworks = [
       {
         cidr: '192.168.1.0/24',
@@ -27,29 +26,42 @@ const isConnectedToCompanyWifi = async (req) => {
         subnet: '255.255.255.0',
         gateway: '192.168.29.1',
         description: 'Office Network 2'
-      },
-      {
-        cidr: '10.0.0.0/24',
-        subnet: '255.255.255.0',
-        description: 'Azure Internal Network'
       }
     ];
 
     // Function to check if IP is in subnet
     const isInSubnet = (ip, network) => {
       try {
-        if (!ip) return false;
+        if (!ip || typeof ip !== 'string') {
+          console.log('Invalid IP:', ip);
+          return false;
+        }
+
+        // Clean IP address
+        const cleanIP = ip.replace(/^::ffff:/, '');
         
+        // Validate IP format
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(cleanIP)) {
+          console.log('Invalid IP format:', cleanIP);
+          return false;
+        }
+
         const [networkAddr] = network.cidr.split('/');
-        const ipParts = ip.split('.');
+        const ipParts = cleanIP.split('.');
         const networkParts = networkAddr.split('.');
         const subnetParts = network.subnet.split('.');
 
-        // Check if IP matches network address under subnet mask
+        // Validate each octet
         for (let i = 0; i < 4; i++) {
           const ipNum = parseInt(ipParts[i]);
           const networkNum = parseInt(networkParts[i]);
           const subnetNum = parseInt(subnetParts[i]);
+
+          if (isNaN(ipNum) || ipNum < 0 || ipNum > 255) {
+            console.log('Invalid IP octet:', ipNum);
+            return false;
+          }
 
           if ((ipNum & subnetNum) !== (networkNum & subnetNum)) {
             return false;
@@ -62,62 +74,18 @@ const isConnectedToCompanyWifi = async (req) => {
       }
     };
 
-    // If we're in production (Azure)
-    if (process.env.NODE_ENV === 'production') {
-      console.log('Production environment detected');
-      
-      // Check client IP
-      const matchedNetwork = allowedNetworks.find(network => 
-        isInSubnet(clientIP, network)
-      );
+    // Check if client IP is in allowed networks
+    const matchedNetwork = allowedNetworks.find(network => 
+      isInSubnet(clientIP, network)
+    );
 
-      if (matchedNetwork) {
-        console.log(`Client IP ${clientIP} matched network: ${matchedNetwork.description}`);
-        return true;
-      }
-
-      // Also check server's network interfaces as fallback
-      const networkInterfaces = os.networkInterfaces();
-      const allIPv4Interfaces = Object.values(networkInterfaces)
-        .flat()
-        .filter(interface => 
-          interface.family === 'IPv4' && 
-          !interface.internal
-        );
-
-      for (const interface of allIPv4Interfaces) {
-        const matchedNetwork = allowedNetworks.find(network => 
-          isInSubnet(interface.address, network)
-        );
-
-        if (matchedNetwork) {
-          console.log(`Server interface ${interface.address} matched network: ${matchedNetwork.description}`);
-          return true;
-        }
-      }
-    } else {
-      // Local development environment
-      const networkInterfaces = os.networkInterfaces();
-      const allIPv4Interfaces = Object.values(networkInterfaces)
-        .flat()
-        .filter(interface => 
-          interface.family === 'IPv4' && 
-          !interface.internal
-        );
-
-      for (const interface of allIPv4Interfaces) {
-        const matchedNetwork = allowedNetworks.find(network => 
-          isInSubnet(interface.address, network)
-        );
-
-        if (matchedNetwork) {
-          console.log(`Local interface ${interface.address} matched network: ${matchedNetwork.description}`);
-          return true;
-        }
-      }
+    if (matchedNetwork) {
+      console.log(`Client IP ${clientIP} matched allowed network: ${matchedNetwork.description}`);
+      return true;
     }
 
-    console.log('No allowed networks found');
+    console.log(`Client IP ${clientIP} is not in allowed networks:`, 
+      allowedNetworks.map(n => n.cidr).join(', '));
     return false;
 
   } catch (error) {
