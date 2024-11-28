@@ -6,24 +6,20 @@ const os = require('os');
 const isConnectedToCompanyWifi = async () => {
   try {
     const networkInterfaces = os.networkInterfaces();
-    const wifi = networkInterfaces['WiFi'];
     
-    if (!wifi) {
-      console.log('WiFi adapter not found');
+    // Get all available network interfaces
+    const allInterfaces = Object.values(networkInterfaces).flat();
+    
+    // Find any active IPv4 interface
+    const activeIPv4Interfaces = allInterfaces.filter(interface => 
+      interface.family === 'IPv4' && 
+      !interface.internal && // Exclude loopback
+      interface.address !== '0.0.0.0'
+    );
+
+    if (activeIPv4Interfaces.length === 0) {
+      console.log('No active IPv4 interfaces found');
       return false;
-    }
-
-    const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
-    const ipv6Interface = wifi.find(interface => interface.family === 'IPv6');
-
-    if (!ipv4Interface) {
-      console.log('No IPv4 interface found');
-      return false;
-    }
-
-    console.log('Current IPv4:', ipv4Interface.address);
-    if (ipv6Interface) {
-      console.log('Current IPv6:', ipv6Interface.address);
     }
 
     // Company WiFi configurations
@@ -31,43 +27,47 @@ const isConnectedToCompanyWifi = async () => {
       {
         network: '192.168.29.0',
         subnet: '255.255.255.0',
-        gateway: '192.168.29.1',
-        ipv6Prefix: '2405:201:c052:1888'
+        gateway: '192.168.29.1'
       },
       {
         network: '192.168.1.0',
         subnet: '255.255.255.0',
-        gateway: '192.168.1.1',
-        ipv6Prefix: '2401:4900:1cb0:2fb0'
+        gateway: '192.168.1.1'
       }
     ];
 
-    // Check if connected to any of the allowed networks
-    const isAllowedNetwork = allowedNetworks.some(network => {
-      const networkParts = network.network.split('.');
-      const currentParts = ipv4Interface.address.split('.');
-      
-      const isCorrectIPv4Network = networkParts[0] === currentParts[0] && 
-                                  networkParts[1] === currentParts[1] && 
-                                  networkParts[2] === currentParts[2];
+    // Check each active interface against allowed networks
+    const isAllowedNetwork = activeIPv4Interfaces.some(interface => {
+      console.log('Checking interface:', {
+        name: interface.name,
+        address: interface.address,
+        family: interface.family
+      });
 
-      const hasCorrectGateway = ipv4Interface.address.startsWith(`${networkParts[0]}.${networkParts[1]}.${networkParts[2]}.`);
+      return allowedNetworks.some(network => {
+        const networkParts = network.network.split('.');
+        const currentParts = interface.address.split('.');
+        
+        const isCorrectNetwork = networkParts[0] === currentParts[0] && 
+                                networkParts[1] === currentParts[1] && 
+                                networkParts[2] === currentParts[2];
 
-      return isCorrectIPv4Network && hasCorrectGateway;
+        return isCorrectNetwork;
+      });
     });
 
-    // Log connection details for debugging
-    console.log('Connection Check Results:', {
-      interface: 'WiFi',
-      currentIPv4: ipv4Interface.address,
-      currentIPv6: ipv6Interface?.address,
+    console.log('Network Check Results:', {
+      interfaces: activeIPv4Interfaces.map(i => ({
+        address: i.address,
+        name: i.name
+      })),
       isAllowedNetwork
     });
 
     return isAllowedNetwork;
 
   } catch (error) {
-    console.error('Error checking WiFi connection:', error);
+    console.error('Error checking network connection:', error);
     return false;
   }
 };
