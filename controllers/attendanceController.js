@@ -5,7 +5,7 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get client IP from various possible headers
+    // Get all possible IP addresses
     const clientIP = 
       req.headers['x-forwarded-for']?.split(',')[0] || 
       req.headers['x-real-ip'] || 
@@ -14,83 +14,78 @@ const isConnectedToCompanyWifi = async (req) => {
 
     console.log('Raw Client IP:', clientIP);
 
-    // Handle localhost/development cases
-    if (clientIP === '::1' || clientIP === '127.0.0.1' || clientIP === 'localhost') {
-      console.log('Development environment detected');
-      
-      // Check local network interfaces
-      const networkInterfaces = os.networkInterfaces();
-      const wifi = networkInterfaces['WiFi'] || networkInterfaces['wlan0'];
-      
-      if (!wifi) {
-        console.log('WiFi adapter not found');
+    // Always check local network interfaces first
+    const networkInterfaces = os.networkInterfaces();
+    console.log('Available Network Interfaces:', Object.keys(networkInterfaces));
+
+    // Check all network interfaces for matching IPs
+    const allIPv4Interfaces = Object.values(networkInterfaces)
+      .flat()
+      .filter(interface => 
+        interface.family === 'IPv4' && 
+        !interface.internal
+      );
+
+    console.log('All IPv4 Interfaces:', allIPv4Interfaces);
+
+    const allowedNetworks = [
+      {
+        cidr: '192.168.29.0/24',
+        gateway: '192.168.29.1',
+        description: 'Office Network 1'
+      },
+      {
+        cidr: '192.168.1.0/24',
+        gateway: '192.168.1.1',
+        description: 'Office Network 2'
+      }
+    ];
+
+    // Function to check if IP is in subnet
+    const isInSubnet = (ip, cidr) => {
+      try {
+        const [network, bits] = cidr.split('/');
+        const mask = parseInt(bits);
+        
+        const ip_addr = ip.split('.').map(Number);
+        const net_addr = network.split('.').map(Number);
+        
+        const ip_binary = ip_addr.reduce((acc, octet) => acc * 256 + octet, 0);
+        const net_binary = net_addr.reduce((acc, octet) => acc * 256 + octet, 0);
+        
+        const mask_binary = ~((1 << (32 - mask)) - 1);
+        
+        return (ip_binary & mask_binary) === (net_binary & mask_binary);
+      } catch (error) {
+        console.error(`Error checking subnet for IP ${ip}:`, error);
         return false;
       }
+    };
 
-      const ipv4Interface = wifi.find(interface => interface.family === 'IPv4');
-      if (!ipv4Interface) {
-        console.log('No IPv4 interface found');
-        return false;
+    // Check if any of the local interfaces are in allowed networks
+    const isLocalNetworkAllowed = allIPv4Interfaces.some(interface => {
+      const matchedNetwork = allowedNetworks.find(network => 
+        isInSubnet(interface.address, network.cidr)
+      );
+
+      if (matchedNetwork) {
+        console.log(`Local interface ${interface.address} matched network: ${matchedNetwork.description}`);
+        return true;
       }
+      return false;
+    });
 
-      console.log('Local WiFi IP:', ipv4Interface.address);
-      return checkAllowedNetworks(ipv4Interface.address);
+    if (isLocalNetworkAllowed) {
+      console.log('Connected to allowed company network');
+      return true;
     }
 
-    // Clean the IP address (remove IPv6 prefix if present)
-    const cleanIP = clientIP.replace(/^::ffff:/, '');
-    console.log('Cleaned Client IP:', cleanIP);
-
-    return checkAllowedNetworks(cleanIP);
+    console.log('Not connected to any allowed company network');
+    return false;
 
   } catch (error) {
     console.error('Error in network validation:', error);
     console.error('Stack:', error.stack);
-    return false;
-  }
-};
-
-// Helper function to check if IP is in allowed networks
-const checkAllowedNetworks = (ip) => {
-  const allowedNetworks = [
-    {
-      cidr: '192.168.29.0/24',
-      gateway: '192.168.29.1',
-      description: 'Office Network 1'
-    },
-    {
-      cidr: '192.168.1.0/24',
-      gateway: '192.168.1.1',
-      description: 'Office Network 2'
-    }
-  ];
-
-  // Function to check if IP is in subnet
-  const isInSubnet = (ip, cidr) => {
-    const [network, bits] = cidr.split('/');
-    const mask = parseInt(bits);
-    
-    const ip_addr = ip.split('.').map(Number);
-    const net_addr = network.split('.').map(Number);
-    
-    const ip_binary = ip_addr.reduce((acc, octet) => acc * 256 + octet, 0);
-    const net_binary = net_addr.reduce((acc, octet) => acc * 256 + octet, 0);
-    
-    const mask_binary = ~((1 << (32 - mask)) - 1);
-    
-    return (ip_binary & mask_binary) === (net_binary & mask_binary);
-  };
-
-  // Check if IP is in any allowed network
-  const matchedNetwork = allowedNetworks.find(network => 
-    isInSubnet(ip, network.cidr)
-  );
-
-  if (matchedNetwork) {
-    console.log(`IP ${ip} matched network: ${matchedNetwork.description}`);
-    return true;
-  } else {
-    console.log(`IP ${ip} did not match any allowed networks`);
     return false;
   }
 };

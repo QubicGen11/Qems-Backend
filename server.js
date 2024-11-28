@@ -20,6 +20,7 @@ const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
 const notificationRoutes = require('./routes/notificationRoutes');
 const bodyParser = require('body-parser');
+const os = require('os');
 
 dotenv.config();
 
@@ -56,7 +57,7 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Real-IP', 'X-Forwarded-For']
 }));
 
 // Routes
@@ -107,13 +108,14 @@ app.use((req, res, next) => {
 
 // Add these middleware before your routes
 app.use((req, res, next) => {
-  // Log all relevant IP information
-  console.log({
+  console.log('Network Debug Info:', {
+    headers: req.headers,
     ip: req.ip,
     ips: req.ips,
     'x-forwarded-for': req.headers['x-forwarded-for'],
     'x-real-ip': req.headers['x-real-ip'],
-    remoteAddress: req.connection.remoteAddress
+    remoteAddress: req.connection.remoteAddress,
+    networkInterfaces: os.networkInterfaces()
   });
   next();
 });
