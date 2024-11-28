@@ -169,3 +169,21 @@ app.use((req, res, next) => {
   req.clientIP = clientIP;
   next();
 });
+
+app.set('trust proxy', true);
+
+app.use((req, res, next) => {
+  const networkInfo = {
+    serverIPs: Object.values(os.networkInterfaces())
+      .flat()
+      .filter(i => i.family === 'IPv4')
+      .map(i => i.address),
+    clientIP: req.headers['x-real-ip'] || 
+             req.headers['x-forwarded-for']?.split(',')[0] || 
+             req.connection.remoteAddress?.replace(/^::ffff:/, ''),
+    headers: req.headers
+  };
+  
+  console.log('Network Debug Info:', networkInfo);
+  next();
+});

@@ -5,92 +5,109 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get client IP from headers
-    const clientIP = 
-      req.headers['x-real-ip'] || 
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-      req.connection.remoteAddress?.replace(/^::ffff:/, '');
+    // Get all network interfaces first
+    const networkInterfaces = os.networkInterfaces();
+    console.log('Available Network Interfaces:', networkInterfaces);
 
-    console.log('Original Client IP:', clientIP);
+    // Get all IPv4 interfaces
+    const serverIPs = Object.values(networkInterfaces)
+      .flat()
+      .filter(interface => 
+        interface.family === 'IPv4' && 
+        !interface.internal
+      )
+      .map(interface => interface.address);
 
-    // Strict office network configurations
+    console.log('Server IPs:', serverIPs);
+
+    // Define allowed networks including Azure internal network
     const allowedNetworks = [
       {
-        cidr: '192.168.1.0/24',
+        cidr: '192.168.1.0/16',
         subnet: '255.255.255.0',
         gateway: '192.168.1.1',
         description: 'Office Network 1'
       },
       {
-        cidr: '192.168.29.0/24',
+        cidr: '192.168.29.0/16',
         subnet: '255.255.255.0',
         gateway: '192.168.29.1',
         description: 'Office Network 2'
+      },
+      // Add Azure internal network
+      {
+        cidr: '10.0.0.0/16',
+        subnet: '255.255.255.0',
+        description: 'Azure Internal Network'
       }
     ];
 
     // Function to check if IP is in subnet
     const isInSubnet = (ip, network) => {
       try {
-        if (!ip || typeof ip !== 'string') {
-          console.log('Invalid IP:', ip);
-          return false;
-        }
-
-        // Clean IP address
-        const cleanIP = ip.replace(/^::ffff:/, '');
+        if (!ip || typeof ip !== 'string') return false;
         
-        // Validate IP format
-        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-        if (!ipRegex.test(cleanIP)) {
-          console.log('Invalid IP format:', cleanIP);
-          return false;
-        }
+        const cleanIP = ip.replace(/^::ffff:/, '');
+        if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(cleanIP)) return false;
 
-        const [networkAddr] = network.cidr.split('/');
-        const ipParts = cleanIP.split('.');
-        const networkParts = networkAddr.split('.');
-        const subnetParts = network.subnet.split('.');
-
-        // Validate each octet
-        for (let i = 0; i < 4; i++) {
-          const ipNum = parseInt(ipParts[i]);
-          const networkNum = parseInt(networkParts[i]);
-          const subnetNum = parseInt(subnetParts[i]);
-
-          if (isNaN(ipNum) || ipNum < 0 || ipNum > 255) {
-            console.log('Invalid IP octet:', ipNum);
-            return false;
-          }
-
-          if ((ipNum & subnetNum) !== (networkNum & subnetNum)) {
-            return false;
-          }
-        }
-        return true;
+        const [networkAddr, bits] = network.cidr.split('/');
+        const mask = parseInt(bits);
+        
+        const ip_binary = cleanIP.split('.')
+          .map(Number)
+          .reduce((acc, octet) => (acc << 8) + octet, 0);
+        
+        const network_binary = networkAddr.split('.')
+          .map(Number)
+          .reduce((acc, octet) => (acc << 8) + octet, 0);
+        
+        const mask_binary = ~((1 << (32 - mask)) - 1);
+        
+        return (ip_binary & mask_binary) === (network_binary & mask_binary);
       } catch (error) {
         console.error(`Error checking subnet for IP ${ip}:`, error);
         return false;
       }
     };
 
-    // Check if client IP is in allowed networks
-    const matchedNetwork = allowedNetworks.find(network => 
-      isInSubnet(clientIP, network)
+    // First check if server is in allowed network
+    const isServerInAllowedNetwork = serverIPs.some(ip => 
+      allowedNetworks.some(network => isInSubnet(ip, network))
     );
 
-    if (matchedNetwork) {
-      console.log(`Client IP ${clientIP} matched allowed network: ${matchedNetwork.description}`);
-      return true;
+    if (isServerInAllowedNetwork) {
+      console.log('Server is in allowed network');
+      
+      // If server is in allowed network, check client IP
+      const clientIP = 
+        req.headers['x-real-ip'] || 
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+        req.connection.remoteAddress?.replace(/^::ffff:/, '');
+
+      console.log('Client IP:', clientIP);
+
+      // If client IP is from internal network, allow it
+      const isClientInAllowedNetwork = allowedNetworks.some(network => 
+        isInSubnet(clientIP, network)
+      );
+
+      if (isClientInAllowedNetwork) {
+        console.log('Client is in allowed network');
+        return true;
+      }
+
+      // If server is in Azure network, we'll trust the connection
+      if (serverIPs.some(ip => isInSubnet(ip, allowedNetworks[2]))) {
+        console.log('Server is in Azure network, allowing connection');
+        return true;
+      }
     }
 
-    console.log(`Client IP ${clientIP} is not in allowed networks:`, 
-      allowedNetworks.map(n => n.cidr).join(', '));
+    console.log('Not in allowed network');
     return false;
 
   } catch (error) {
-    console.error('Error checking network connection:', error);
-    console.error('Stack:', error.stack);
+    console.error('Error in network validation:', error);
     return false;
   }
 };
