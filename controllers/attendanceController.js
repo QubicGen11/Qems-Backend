@@ -5,41 +5,42 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Get all possible IP addresses
-    const clientIP = 
-      req.headers['x-forwarded-for']?.split(',')[0] || 
-      req.headers['x-real-ip'] || 
-      req.connection.remoteAddress || 
-      req.socket.remoteAddress;
+    // Azure VM configurations
+    const azureConfig = {
+      publicIP: '74.179.60.127',
+      privateIP: '10.0.0.4',
+      vnetCIDR: '10.0.0.0/24'
+    };
 
-    console.log('Raw Client IP:', clientIP);
-
-    // Always check local network interfaces first
-    const networkInterfaces = os.networkInterfaces();
-    console.log('Available Network Interfaces:', Object.keys(networkInterfaces));
-
-    // Check all network interfaces for matching IPs
-    const allIPv4Interfaces = Object.values(networkInterfaces)
-      .flat()
-      .filter(interface => 
-        interface.family === 'IPv4' && 
-        !interface.internal
-      );
-
-    console.log('All IPv4 Interfaces:', allIPv4Interfaces);
-
+    // Company office network configurations
     const allowedNetworks = [
       {
         cidr: '192.168.29.0/24',
-        gateway: '192.168.29.1',
         description: 'Office Network 1'
       },
       {
         cidr: '192.168.1.0/24',
-        gateway: '192.168.1.1',
         description: 'Office Network 2'
+      },
+      {
+        cidr: '10.0.0.0/24',  // Azure VNet
+        description: 'Azure Network'
       }
     ];
+
+    // Get client IP from various headers
+    const clientIP = 
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.headers['x-real-ip'] ||
+      req.headers['x-client-ip'] ||
+      req.headers['x-azure-clientip'] ||
+      req.connection.remoteAddress?.replace(/^::ffff:/, '');
+
+    console.log('Debug Info:', {
+      clientIP,
+      headers: req.headers,
+      remoteAddr: req.connection.remoteAddress
+    });
 
     // Function to check if IP is in subnet
     const isInSubnet = (ip, cidr) => {
@@ -62,26 +63,42 @@ const isConnectedToCompanyWifi = async (req) => {
       }
     };
 
-    // Check if any of the local interfaces are in allowed networks
-    const isLocalNetworkAllowed = allIPv4Interfaces.some(interface => {
-      const matchedNetwork = allowedNetworks.find(network => 
-        isInSubnet(interface.address, network.cidr)
+    // Check if we're running locally
+    if (clientIP === '::1' || clientIP === '127.0.0.1') {
+      const networkInterfaces = os.networkInterfaces();
+      const allIPv4Interfaces = Object.values(networkInterfaces)
+        .flat()
+        .filter(interface => 
+          interface.family === 'IPv4' && 
+          !interface.internal
+        );
+
+      console.log('Local Network Interfaces:', allIPv4Interfaces);
+
+      const isLocalAllowed = allIPv4Interfaces.some(interface => 
+        allowedNetworks.some(network => {
+          const matches = isInSubnet(interface.address, network.cidr);
+          if (matches) {
+            console.log(`Local interface ${interface.address} matched network: ${network.description}`);
+          }
+          return matches;
+        })
       );
 
-      if (matchedNetwork) {
-        console.log(`Local interface ${interface.address} matched network: ${matchedNetwork.description}`);
-        return true;
-      }
-      return false;
-    });
-
-    if (isLocalNetworkAllowed) {
-      console.log('Connected to allowed company network');
-      return true;
+      return isLocalAllowed;
     }
 
-    console.log('Not connected to any allowed company network');
-    return false;
+    // For deployed environment
+    const isAllowed = allowedNetworks.some(network => {
+      const matches = isInSubnet(clientIP, network.cidr);
+      if (matches) {
+        console.log(`Client IP ${clientIP} matched network: ${network.description}`);
+      }
+      return matches;
+    });
+
+    console.log(`Access ${isAllowed ? 'granted' : 'denied'} for IP: ${clientIP}`);
+    return isAllowed;
 
   } catch (error) {
     console.error('Error in network validation:', error);
