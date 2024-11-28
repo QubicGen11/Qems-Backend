@@ -5,103 +5,87 @@ const os = require('os');
 
 const isConnectedToCompanyWifi = async (req) => {
   try {
-    // Azure VM configurations
-    const azureConfig = {
-      publicIP: '74.179.60.127',
-      privateIP: '10.0.0.4',
-      vnetCIDR: '10.0.0.0/24'
-    };
+    // Get network interfaces
+    const networkInterfaces = os.networkInterfaces();
+    const wifi = networkInterfaces['WiFi'];
+
+    console.log('Debug - WiFi Interface:', wifi);
+
+    if (!wifi) {
+      console.log('No WiFi interface found');
+      return false;
+    }
+
+    // Get the IPv4 interface from WiFi
+    const ipv4Interface = wifi.find(interface => 
+      interface.family === 'IPv4' && 
+      !interface.internal
+    );
+
+    if (!ipv4Interface) {
+      console.log('No IPv4 interface found on WiFi');
+      return false;
+    }
+
+    console.log('Current WiFi IP:', ipv4Interface.address);
 
     // Company office network configurations
     const allowedNetworks = [
       {
-        cidr: '192.168.29.0/24',
+        cidr: '192.168.1.0/24',
+        subnet: '255.255.255.0',
+        gateway: '192.168.1.1',
         description: 'Office Network 1'
       },
       {
-        cidr: '192.168.1.0/24',
+        cidr: '192.168.29.0/24',
+        subnet: '255.255.255.0',
+        gateway: '192.168.29.1',
         description: 'Office Network 2'
-      },
-      {
-        cidr: '10.0.0.0/24',  // Azure VNet
-        description: 'Azure Network'
       }
     ];
 
-    // Get client IP from various headers
-    const clientIP = 
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.headers['x-real-ip'] ||
-      req.headers['x-client-ip'] ||
-      req.headers['x-azure-clientip'] ||
-      req.connection.remoteAddress?.replace(/^::ffff:/, '');
-
-    console.log('Debug Info:', {
-      clientIP,
-      headers: req.headers,
-      remoteAddr: req.connection.remoteAddress
-    });
-
     // Function to check if IP is in subnet
-    const isInSubnet = (ip, cidr) => {
+    const isInSubnet = (ip, network) => {
       try {
-        const [network, bits] = cidr.split('/');
-        const mask = parseInt(bits);
-        
-        const ip_addr = ip.split('.').map(Number);
-        const net_addr = network.split('.').map(Number);
-        
-        const ip_binary = ip_addr.reduce((acc, octet) => acc * 256 + octet, 0);
-        const net_binary = net_addr.reduce((acc, octet) => acc * 256 + octet, 0);
-        
-        const mask_binary = ~((1 << (32 - mask)) - 1);
-        
-        return (ip_binary & mask_binary) === (net_binary & mask_binary);
+        const [networkAddr] = network.cidr.split('/');
+        const ipParts = ip.split('.');
+        const networkParts = networkAddr.split('.');
+        const subnetParts = network.subnet.split('.');
+
+        // Check if IP matches network address under subnet mask
+        for (let i = 0; i < 4; i++) {
+          const ipNum = parseInt(ipParts[i]);
+          const networkNum = parseInt(networkParts[i]);
+          const subnetNum = parseInt(subnetParts[i]);
+
+          if ((ipNum & subnetNum) !== (networkNum & subnetNum)) {
+            return false;
+          }
+        }
+        return true;
       } catch (error) {
         console.error(`Error checking subnet for IP ${ip}:`, error);
         return false;
       }
     };
 
-    // Check if we're running locally
-    if (clientIP === '::1' || clientIP === '127.0.0.1') {
-      const networkInterfaces = os.networkInterfaces();
-      const allIPv4Interfaces = Object.values(networkInterfaces)
-        .flat()
-        .filter(interface => 
-          interface.family === 'IPv4' && 
-          !interface.internal
-        );
+    // Check if current WiFi IP is in allowed networks
+    const matchedNetwork = allowedNetworks.find(network => 
+      isInSubnet(ipv4Interface.address, network)
+    );
 
-      console.log('Local Network Interfaces:', allIPv4Interfaces);
-
-      const isLocalAllowed = allIPv4Interfaces.some(interface => 
-        allowedNetworks.some(network => {
-          const matches = isInSubnet(interface.address, network.cidr);
-          if (matches) {
-            console.log(`Local interface ${interface.address} matched network: ${network.description}`);
-          }
-          return matches;
-        })
-      );
-
-      return isLocalAllowed;
+    if (matchedNetwork) {
+      console.log(`Connected to allowed network: ${matchedNetwork.description}`);
+      console.log(`IP: ${ipv4Interface.address}, Gateway: ${matchedNetwork.gateway}`);
+      return true;
     }
 
-    // For deployed environment
-    const isAllowed = allowedNetworks.some(network => {
-      const matches = isInSubnet(clientIP, network.cidr);
-      if (matches) {
-        console.log(`Client IP ${clientIP} matched network: ${network.description}`);
-      }
-      return matches;
-    });
-
-    console.log(`Access ${isAllowed ? 'granted' : 'denied'} for IP: ${clientIP}`);
-    return isAllowed;
+    console.log(`IP ${ipv4Interface.address} is not in any allowed network`);
+    return false;
 
   } catch (error) {
-    console.error('Error in network validation:', error);
+    console.error('Error checking WiFi connection:', error);
     console.error('Stack:', error.stack);
     return false;
   }
