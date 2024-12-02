@@ -57,14 +57,7 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Real-IP', 
-    'X-Forwarded-For',
-    'X-Client-IP',
-    'X-Azure-ClientIP'
-  ]
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Routes
@@ -103,106 +96,4 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Closing HTTP server...');
   await prisma.$disconnect();
   process.exit(0);
-});
-
-app.set('trust proxy', true);
-app.use((req, res, next) => {
-  console.log('Request IP:', req.ip);
-  console.log('X-Forwarded-For:', req.headers['x-forwarded-for']);
-  console.log('Remote Address:', req.connection.remoteAddress);
-  next();
-});
-
-// Add these middleware before your routes
-app.use((req, res, next) => {
-  console.log('Network Debug Info:', {
-    headers: req.headers,
-    ip: req.ip,
-    ips: req.ips,
-    'x-forwarded-for': req.headers['x-forwarded-for'],
-    'x-real-ip': req.headers['x-real-ip'],
-    remoteAddress: req.connection.remoteAddress,
-    networkInterfaces: os.networkInterfaces()
-  });
-  next();
-});
-
-// Enable trust proxy if you're behind a reverse proxy
-app.set('trust proxy', process.env.NODE_ENV === 'production');
-
-app.use((req, res, next) => {
-  // Add Azure's forwarded IP header if available
-  if (req.headers['x-azure-clientip']) {
-    req.headers['x-forwarded-for'] = req.headers['x-azure-clientip'];
-  }
-  next();
-});
-
-// Add middleware to handle IP forwarding
-app.use((req, res, next) => {
-  // Log all possible IP sources
-  console.log('IP Debug:', {
-    originalIp: req.ip,
-    forwardedFor: req.headers['x-forwarded-for'],
-    realIp: req.headers['x-real-ip'],
-    clientIp: req.headers['x-client-ip'],
-    remoteAddr: req.connection.remoteAddress
-  });
-  next();
-});
-
-// Middleware to validate and clean IP addresses
-app.use((req, res, next) => {
-  const clientIP = 
-    req.headers['x-real-ip'] || 
-    req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-    req.connection.remoteAddress?.replace(/^::ffff:/, '');
-
-  console.log('IP Validation:', {
-    originalIP: req.connection.remoteAddress,
-    forwardedFor: req.headers['x-forwarded-for'],
-    realIP: req.headers['x-real-ip'],
-    cleanedIP: clientIP
-  });
-
-  // Store cleaned IP for later use
-  req.clientIP = clientIP;
-  next();
-});
-
-app.set('trust proxy', true);
-
-app.use((req, res, next) => {
-  const networkInfo = {
-    serverIPs: Object.values(os.networkInterfaces())
-      .flat()
-      .filter(i => i.family === 'IPv4')
-      .map(i => i.address),
-    clientIP: req.headers['x-real-ip'] || 
-             req.headers['x-forwarded-for']?.split(',')[0] || 
-             req.connection.remoteAddress?.replace(/^::ffff:/, ''),
-    headers: req.headers
-  };
-  
-  console.log('Network Debug Info:', networkInfo);
-  next();
-});
-
-// Add detailed logging middleware
-app.use((req, res, next) => {
-  const networkInfo = {
-    environment: process.env.NODE_ENV,
-    serverPublicIP: '74.179.60.127',
-    clientIP: req.headers['x-real-ip'] || 
-              req.headers['x-forwarded-for']?.split(',')[0] || 
-              req.connection.remoteAddress?.replace(/^::ffff:/, ''),
-    headers: {
-      'x-real-ip': req.headers['x-real-ip'],
-      'x-forwarded-for': req.headers['x-forwarded-for'],
-      'remote-addr': req.connection.remoteAddress
-    }
-  };
-  
-  console.log('Network Debug Info:', networkInfo);
-  next();
 });

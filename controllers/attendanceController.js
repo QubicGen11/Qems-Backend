@@ -1,132 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const dns = require('dns');
-const os = require('os');
 
-const isConnectedToCompanyWifi = async (req) => {
-  try {
-    // Server configurations
-    const serverConfig = {
-      publicIP: '74.179.60.127',
-      privateIP: '10.0.0.4',
-      allowedNetworks: [
-        {
-          cidr: '192.168.1.0/16',
-          subnet: '255.255.255.0',
-          gateway: '192.168.1.1',
-          description: 'Office Network 1'
-        },
-        {
-          cidr: '192.168.29.0/16',
-          subnet: '255.255.255.0',
-          gateway: '192.168.29.1',
-          description: 'Office Network 2'
-        }
-      ]
-    };
-
-    // Get client IP
-    const clientIP = 
-      req.headers['x-real-ip'] || 
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-      req.connection.remoteAddress?.replace(/^::ffff:/, '');
-
-    console.log('Client IP:', clientIP);
-
-    // Function to check if IP is in subnet
-    const isInSubnet = (ip, network) => {
-      try {
-        if (!ip || typeof ip !== 'string') return false;
-        
-        const cleanIP = ip.replace(/^::ffff:/, '');
-        if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(cleanIP)) return false;
-
-        const [networkAddr, bits] = network.cidr.split('/');
-        const mask = parseInt(bits);
-        
-        const ip_binary = cleanIP.split('.')
-          .map(Number)
-          .reduce((acc, octet) => (acc << 8) + octet, 0);
-        
-        const network_binary = networkAddr.split('.')
-          .map(Number)
-          .reduce((acc, octet) => (acc << 8) + octet, 0);
-        
-        const mask_binary = ~((1 << (32 - mask)) - 1);
-        
-        return (ip_binary & mask_binary) === (network_binary & mask_binary);
-      } catch (error) {
-        console.error(`Error checking subnet for IP ${ip}:`, error);
-        return false;
-      }
-    };
-
-    // Check if we're running locally
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Development environment detected');
-      
-      const networkInterfaces = os.networkInterfaces();
-      const localIPs = Object.values(networkInterfaces)
-        .flat()
-        .filter(interface => 
-          interface.family === 'IPv4' && 
-          !interface.internal
-        );
-
-      // Check if any local interface is in allowed networks
-      const isLocalAllowed = localIPs.some(interface => 
-        serverConfig.allowedNetworks.some(network => 
-          isInSubnet(interface.address, network)
-        )
-      );
-
-      if (isLocalAllowed) {
-        console.log('Local development - allowed network');
-        return true;
-      }
-    } else {
-      console.log('Production environment detected');
-      
-      // In production, strictly check if client is from allowed networks
-      const isAllowed = serverConfig.allowedNetworks.some(network => 
-        isInSubnet(clientIP, network)
-      );
-
-      if (isAllowed) {
-        console.log(`Client IP ${clientIP} is from allowed network`);
-        return true;
-      }
-
-      // If client IP matches server's public IP, allow it
-      if (clientIP === serverConfig.publicIP) {
-        console.log('Client IP matches server public IP');
-        return true;
-      }
-    }
-
-    console.log(`Access denied for IP: ${clientIP}`);
-    return false;
-
-  } catch (error) {
-    console.error('Error in network validation:', error);
-    return false;
-  }
-};
 
 const clockIn = async (req, res) => {
   try {
     const { email } = req.body;
     console.log(`ClockIn request received with email: ${email}`);
     
-    // Check if connected to company WiFi
-    const isCompanyWifi = await isConnectedToCompanyWifi(req);
-    if (!isCompanyWifi) {
-      return res.status(403).json({ 
-        message: 'Clock-in is only allowed when connected to company WiFi network.',
-        error: 'INVALID_NETWORK'
-      });
-    }
-
     // Check if user exists with department info
     const user = await prisma.user.findFirst({ 
       where: { email },
@@ -166,9 +46,9 @@ const clockIn = async (req, res) => {
         status: 'pending',
         employeeName: user.username,
         joinDate: user.joiningDate,
-        Department: user.department, // Add department from user
+        Department: user.department,
         date: new Date(),
-        employeeImage: user.employee?.employeeImg || null // Add employee image if available
+        employeeImage: user.employee?.employeeImg || null
       }
     });
 
