@@ -20,6 +20,7 @@ model User {
   mainPosition String? // New field for main position
   joiningDate DateTime? // New field for joining date
   department String? // Add this field
+  subDepartment String?   // Add this field (optional with ?)
 }
 
 

@@ -21,7 +21,53 @@ const generateOTP = () => {
 
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, role, salary, mainPosition, joiningDate, department } = req.body;
+    const { 
+      username, 
+      email, 
+      password, 
+      role, 
+      salary, 
+      mainPosition, 
+      joiningDate, 
+      department,
+      subDepartment
+    } = req.body;
+
+    console.log('Received registration data:', {
+      username,
+      email,
+      role,
+      salary,
+      mainPosition,
+      joiningDate,
+      department,
+      subDepartment
+    });
+
+    // Validation checks
+    if (!username || !email || !password || !role || !salary || !mainPosition || !joiningDate || !department) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        missingFields: {
+          username: !username,
+          email: !email,
+          password: !password,
+          role: !role,
+          salary: !salary,
+          mainPosition: !mainPosition,
+          joiningDate: !joiningDate,
+          department: !department
+        }
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@qubicgen\.com$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: 'Invalid email format. Email must be from @qubicgen.com domain' 
+      });
+    }
     
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -47,7 +93,6 @@ const registerUser = async (req, res) => {
         email,
         otp,
         expiresAt: otpExpiry,
-        // Store registration data as JSON string
         metadata: JSON.stringify({
           username,
           password,
@@ -55,7 +100,8 @@ const registerUser = async (req, res) => {
           salary,
           mainPosition,
           joiningDate,
-          department
+          department,
+          subDepartment
         })
       }
     });
@@ -130,7 +176,7 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // Create the user
+    // Create the user with subDepartment
     const hashedPassword = await bcrypt.hash(registrationData.password, 10);
     const newUser = await prisma.user.create({
       data: {
@@ -141,6 +187,7 @@ const verifyOTP = async (req, res) => {
         salary: parseFloat(registrationData.salary),
         mainPosition: registrationData.mainPosition,
         department: registrationData.department,
+        subDepartment: registrationData.subDepartment,
         joiningDate: new Date(registrationData.joiningDate),
         status: 'Active'
       }

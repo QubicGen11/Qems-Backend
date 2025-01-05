@@ -37,7 +37,7 @@ const clockIn = async (req, res) => {
       return res.status(400).json({ message: 'Already clocked in today.' });
     }
 
-    // Create new attendance record with department
+    // Create new attendance record with department and subDepartment
     const attendance = await prisma.attendance.create({
       data: {
         employeeId: user.employeeId,
@@ -47,6 +47,8 @@ const clockIn = async (req, res) => {
         employeeName: user.username,
         joinDate: user.joiningDate,
         Department: user.department,
+        subDepartment: user.subDepartment, // Add subDepartment
+        mainPosition: user.mainPosition,    // Add mainPosition for completeness
         date: new Date(),
         employeeImage: user.employee?.employeeImg || null
       }
@@ -581,7 +583,6 @@ const getTodaysAttendance = async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Fetch employees with user information
-    console.log('Fetching employees with user details...');
     const employees = await prisma.employee.findMany({
       select: {
         employee_id: true,
@@ -593,7 +594,9 @@ const getTodaysAttendance = async (req, res) => {
         users: {
           select: {
             department: true,
-            mainPosition: true  // Add mainPosition to the selection
+            subDepartment: true,
+            mainPosition: true,
+            role: true  // Add role to the selection
           }
         }
       }
@@ -617,16 +620,20 @@ const getTodaysAttendance = async (req, res) => {
         record => record.employeeId === employee.employee_id
       );
 
-      // Use mainPosition and department from user if available
+      // Use user data if available
       const mainPosition = employee.users[0]?.mainPosition || 'N/A';
       const department = employee.users[0]?.department || employee.department || 'N/A';
+      const subDepartment = employee.users[0]?.subDepartment || 'N/A';
+      const role = employee.users[0]?.role || 'N/A';  // Add role
 
       return {
         employeeId: employee.employee_id,
         employeeName: `${employee.firstname} ${employee.lastname}`.trim(),
         email: employee.email,
         department: department,
-        mainPosition: mainPosition,  // Add mainPosition to the return object
+        subDepartment: subDepartment,
+        mainPosition: mainPosition,
+        role: role,  // Add role to the return object
         profileImage: employee.employeeImg,
         checkin_Time: attendance ? attendance.checkin_Time : null,
         checkout_Time: attendance ? attendance.checkout_Time : null,
