@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const pdf = require('html-pdf');
 const fs = require('fs');
+const employeeRoutes = require('./routes/employeeRoutes');
 const authRouter = require('./routes/authRouter');
 const userAuthRouter = require('./routes/userAuthRoute');
 const attendanceRoute = require('./routes/attendanceRouter');
@@ -62,6 +63,7 @@ app.use(cors({
 
 // Routes
 app.use('/qubinest', authRouter);
+app.use('/qubinest/employees', employeeRoutes);
 app.use('/qubinest', userAuthRouter);
 app.use('/qubinest', attendanceRoute);
 app.use('/qubinest', employeeRouter);

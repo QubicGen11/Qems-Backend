@@ -592,7 +592,8 @@ const getTodaysAttendance = async (req, res) => {
         employeeImg: true,
         users: {
           select: {
-            department: true
+            department: true,
+            mainPosition: true  // Add mainPosition to the selection
           }
         }
       }
@@ -616,7 +617,8 @@ const getTodaysAttendance = async (req, res) => {
         record => record.employeeId === employee.employee_id
       );
 
-      // Use department from user if available, otherwise fall back to employee department
+      // Use mainPosition and department from user if available
+      const mainPosition = employee.users[0]?.mainPosition || 'N/A';
       const department = employee.users[0]?.department || employee.department || 'N/A';
 
       return {
@@ -624,6 +626,7 @@ const getTodaysAttendance = async (req, res) => {
         employeeName: `${employee.firstname} ${employee.lastname}`.trim(),
         email: employee.email,
         department: department,
+        mainPosition: mainPosition,  // Add mainPosition to the return object
         profileImage: employee.employeeImg,
         checkin_Time: attendance ? attendance.checkin_Time : null,
         checkout_Time: attendance ? attendance.checkout_Time : null,
