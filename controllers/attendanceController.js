@@ -47,8 +47,7 @@ const clockIn = async (req, res) => {
         employeeName: user.username,
         joinDate: user.joiningDate,
         Department: user.department,
-        subDepartment: user.subDepartment, // Add subDepartment
-        mainPosition: user.mainPosition,    // Add mainPosition for completeness
+       
         date: new Date(),
         employeeImage: user.employee?.employeeImg || null
       }
