@@ -20,6 +20,7 @@ const teamRouter=require('./routes/teamRouter')
 const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
 const notificationRoutes = require('./routes/notificationRoutes');
+const suggestionRoutes = require('./routes/suggestionRoutes');
 const bodyParser = require('body-parser');
 const os = require('os');
 
@@ -70,6 +71,7 @@ app.use('/qubinest', employeeRouter);
 app.use('/qubinest', reportRouter);
 app.use('/qubinest', leaveRequestRouter);
 app.use('/qubinest', teamRouter);
+app.use('/qubinest', suggestionRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
 app.use('/qubinest', notificationRoutes);

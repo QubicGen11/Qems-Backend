@@ -252,3 +252,12 @@ model OTP {
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
+
+
+model Suggestion {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  category  String
+  timestamp DateTime @default(now())
+  status    String   @default("pending")
+}
