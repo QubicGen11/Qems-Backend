@@ -239,8 +239,73 @@ const verifyOTP = async (req, res) => {
 };
 
 const resendOTP = async (req, res) => {
-  // Implementation for resending OTP
-  // Similar to the OTP generation part in registerUser
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if there's an existing OTP record
+    const existingOTP = await prisma.oTP.findUnique({
+      where: { email }
+    });
+
+    if (!existingOTP) {
+      return res.status(404).json({
+        success: false,
+        message: 'No registration in progress for this email'
+      });
+    }
+
+    // Generate new OTP
+    const newOTP = generateOTP();
+    const newOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Update the OTP record
+    await prisma.oTP.update({
+      where: { email },
+      data: {
+        otp: newOTP,
+        expiresAt: newOTPExpiry,
+        // Keep the existing metadata
+        metadata: existingOTP.metadata
+      }
+    });
+
+    // Send new OTP email
+    const mailOptions = {
+      from: 'qubicgen@gmail.com',
+      to: email,
+      subject: 'QubiNest - New Email Verification OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Email Verification - New OTP</h2>
+          <p>Your new OTP for email verification is: <strong>${newOTP}</strong></p>
+          <p>This OTP will expire in 10 minutes.</p>
+          <p>If you didn't request this OTP, please ignore this email.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({
+      success: true,
+      message: 'New OTP sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend OTP',
+      error: error.message
+    });
+  }
 };
 
 const loginUser = async (req, res) => {
