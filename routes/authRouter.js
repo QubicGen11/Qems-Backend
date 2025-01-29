@@ -7,8 +7,11 @@ const {
     changePassword,
     verifyOTP,
     resendOTP,
-    updateUserStatus
+    updateUserStatus,
+    forgotPassword,
+    verifyForgotPasswordOTP
 } = require('../controllers/authController');
+
 
 const router = express.Router();
 
@@ -20,4 +23,6 @@ router.post('/logout', logoutUser);
 router.put('/changepassword', changePassword);
 router.get('/allusers', getAllUsers);
 router.put('/updateUserStatus', updateUserStatus);
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP);
 module.exports = router;

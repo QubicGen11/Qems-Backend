@@ -495,4 +495,163 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, resetPassword, getAllUsers, changePassword, verifyOTP, resendOTP, updateUserStatus };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if the user exists
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Delete any existing OTP for this email
+    await prisma.oTP.deleteMany({
+      where: { email }
+    });
+
+    // Store the OTP
+    await prisma.oTP.create({
+      data: {
+        email,
+        otp,
+        expiresAt: otpExpiry,
+        metadata: JSON.stringify({
+          action: 'password_reset'
+        })
+      }
+    });
+
+    // Send OTP email
+    const mailOptions = {
+      from: 'qubicgen@gmail.com',
+      to: email,
+      subject: 'QubiNest - Password Reset OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset</h2>
+          <p>Your OTP for password reset is: <strong>${otp}</strong></p>
+          <p>This OTP will expire in 10 minutes.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email for password reset'
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process forgot password request',
+      error: error.message
+    });
+  }
+};
+
+const verifyForgotPasswordOTP = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, OTP, and new password are required'
+      });
+    }
+
+    // Find the OTP record
+    const otpRecord = await prisma.oTP.findFirst({
+      where: {
+        email,
+        otp,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      });
+    }
+
+    // Parse the stored metadata
+    const metadata = otpRecord.metadata ? JSON.parse(otpRecord.metadata) : null;
+
+    if (!metadata || metadata.action !== 'password_reset') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP action'
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword }
+    });
+
+    // Delete the OTP record
+    await prisma.oTP.delete({
+      where: { email }
+    });
+
+    // Send confirmation email
+    const confirmationMailOptions = {
+      from: 'qubicgen@gmail.com',
+      to: email,
+      subject: 'QubiNest - Password Reset Successful',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset Successful</h2>
+          <p>Your password has been successfully reset.</p>
+          <p>If you did not request this change, please contact support immediately.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(confirmationMailOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful'
+    });
+
+  } catch (error) {
+    console.error('Verify forgot password OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP and reset password',
+      error: error.message
+    });
+  }
+};
+
+module.exports = { registerUser, loginUser, logoutUser, resetPassword, getAllUsers, changePassword, verifyOTP, resendOTP, updateUserStatus, forgotPassword, verifyForgotPasswordOTP };
