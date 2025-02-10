@@ -3,207 +3,288 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CMSEntry {
+  id                  String   @id @default(uuid())
+  name                String
+  contact             String
+  email               String
+  branch              String
+  comfortableLanguage String
+  createdByUserId     String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  callStatus          CallStatus?
+  status              FollowUpStatus?
+  assignedTo          String?  // New field to track the assigned executive
+
+  // Remove relation with CMSLog
+  // logs CMSLog[] @relation(name: "CMSEntry_Logs")
+
+  // One-to-Many Relation with Comments
+  comments CMSEntryComment[] @relation(name: "CMSEntry_Comments")
+}
+
+model CMSEntryComment {
+  id             String   @id @default(uuid())
+  entryId        String
+  entry          CMSEntry @relation(name: "CMSEntry_Comments", fields: [entryId], references: [id], onDelete: Cascade)
+  postedByUserId String
+  postedAt       DateTime @default(now())
+  comment        String
+  createdAt DateTime @default(now())
+
+  // Explicit relation with User
+  postedByUser User @relation(name: "PostedByUser", fields: [postedByUserId], references: [email])
+}
+
+model CMSLog {
+  id                String   @id @default(uuid())
+  // Remove entryId field
+  // entryId           String
+  action            String // Example: 'Created', 'Updated', 'Deleted'
+  details           String? // Additional details
+  performedByUserId String // User who performed the action
+  performedBy       String // Name of the user
+  department        String // User's department
+  role              String // User's role
+  timestamp         DateTime @default(now())
+
+  // Remove relation with CMSEntry
+  // entry CMSEntry @relation(name: "CMSEntry_Logs", fields: [entryId], references: [id], onDelete: Cascade)
+
+  // Add Opposite Relation for User
+  performedByUser User @relation(name: "PerformedByUser", fields: [performedByUserId], references: [email], onDelete: Cascade)
+}
+
+enum CallStatus {
+  ANSWERED
+  UNANSWERED
+  SWITCH_OFF
+  BUSY
+  NOT_REACHABLE
+}
+
+enum FollowUpStatus {
+  INTERESTED
+  NOT_INTERESTED
+  FOLLOW_UP
+  COMPLETE
+}
+
+enum LogAction {
+  CREATED
+  UPDATED
+  COMMENT_ADDED
+  STATUS_UPDATED
 }
 
 model User {
-  employeeId String?  // Foreign key to Employee
-  employee Employee? @relation(fields: [employeeId], references: [employee_id]) // Relation to Employee
-  username String?
-  email String @id // Primary key
-  password String 
-  role String?
-  status Status @default(Active)
-  createdAt DateTime @default(now()) 
-  salary Float? // New field for salary
-  mainPosition String? // New field for main position
-  joiningDate DateTime? // New field for joining date
-  department String? // Add this field
-  subDepartment String?   // Add this field (optional with ?)
+  employeeId    String?
+  employee      Employee? @relation(fields: [employeeId], references: [employee_id])
+  username      String?
+  email         String    @id
+  password      String
+  role          String?
+  status        Status    @default(Active)
+  createdAt     DateTime  @default(now())
+  salary        Float?
+  mainPosition  String?
+  joiningDate   DateTime?
+  department    String?
+  subDepartment String?
+
+  // Add the relation field to CMSEntryComment
+  commentsPosted CMSEntryComment[] @relation(name: "PostedByUser")
+
+  // Relation with Logs
+  logsPerformed CMSLog[] @relation(name: "PerformedByUser")
 }
-
-
 
 model Employee {
-  employee_id  String   @id
-  employeeImg String?
-  firstname    String?
-  lastname     String?
-  dob          DateTime?
-  gender       String?
-  address      String?
-  phone        String?
-  email        String?  
-  companyEmail String?
-  hireDate     DateTime?
-  position     String?
-  skills       String?
-  education    String?
-  linkedin     String?
-  about        String?
-  createdAt    DateTime? @default(now())
-  updatedAt    DateTime? @updatedAt
-  teamName String?
-  isTeamLead Boolean @default(false)
-  reportingManager String?
+  employee_id        String             @id
+  employeeImg        String?
+  firstname          String?
+  lastname           String?
+  dob                DateTime?
+  gender             String?
+  address            String?
+  phone              String?
+  email              String?
+  companyEmail       String?
+  hireDate           DateTime?
+  position           String?
+  skills             String?
+  education          String?
+  linkedin           String?
+  about              String?
+  createdAt          DateTime?          @default(now())
+  updatedAt          DateTime?          @updatedAt
+  teamName           String?
+  isTeamLead         Boolean            @default(false)
+  reportingManager   String?
   reportingManagerId String?
-  department   String?
-  attendances  Attendance[]
-  salaries     Salary[]
-  reports      employeeReports[]
-  employee_Projects employeeProjects[]
-  leaveRequests leaveRequests[]
-  leaveBalance LeaveBalance[]
-  users        User[]
-  teams Team[]
-  employeeLeaves employeeLeaves[]
-  notifications Notification[]
+  department         String?
+  attendances        Attendance[]
+  salaries           Salary[]
+  reports            employeeReports[]
+  employee_Projects  employeeProjects[]
+  leaveRequests      leaveRequests[]
+  leaveBalance       LeaveBalance[]
+  users              User[]
+  teams              Team[]
+  employeeLeaves     employeeLeaves[]
+  notifications      Notification[]
 }
 
-
 model EmployeeIdTracker {
-  id              Int  @id @default(autoincrement())
+  id               Int @id @default(autoincrement())
   last_used_number Int @default(0)
 }
 
 model Attendance {
-  id Int @id @default(autoincrement())
-  employeeId String 
-  date DateTime @default(now())
-  employeeName String?
+  id            Int       @id @default(autoincrement())
+  employeeId    String
+  date          DateTime  @default(now())
+  employeeName  String?
   employeeImage String?
-  status String?
-  reports String? @db.Text
-  reportMedia String[]
-  checkin_Time DateTime?
+  status        String?
+  reports       String?   @db.Text
+  reportMedia   String[]
+  checkin_Time  DateTime?
   checkout_Time DateTime?
-  companyEmail String ?
-  Department String?
-  joinDate DateTime ?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  employee Employee? @relation(fields: [employeeId], references: [employee_id]) 
+  companyEmail  String?
+  Department    String?
+  joinDate      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  employee      Employee? @relation(fields: [employeeId], references: [employee_id])
 }
 
 model BankDetail {
-  id           Int      @id @default(autoincrement())
-  bankName     String?
+  id            Int      @id @default(autoincrement())
+  bankName      String?
   accountNumber String?
-  ifscCode     String?
-  panNumber    String?
-  aadharNumber String?
-  pfNumber     String?
-  employee_id  String?  @unique 
-  createdAt    DateTime @default(now()) 
-  updatedAt    DateTime @updatedAt
+  ifscCode      String?
+  panNumber     String?
+  aadharNumber  String?
+  pfNumber      String?
+  employee_id   String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
 }
 
 model leaveRequests {
-  leave_id Int @id @default(autoincrement())
-  employee_id String?
-  companyEmail String?
-  department String?
-  employee Employee? @relation(fields: [employee_id], references: [employee_id])
-  leaveType String
-  duration String?
-  startDate DateTime?
-  endDate DateTime?
-  reason String?
-  status String?
+  leave_id      Int       @id @default(autoincrement())
+  employee_id   String?
+  companyEmail  String?
+  department    String?
+  employee      Employee? @relation(fields: [employee_id], references: [employee_id])
+  leaveType     String
+  duration      String?
+  startDate     DateTime?
+  endDate       DateTime?
+  reason        String?
+  status        String?
   leaveDocument String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
 }
-model LeaveBalance{
-  leaveBalanceId Int @id @default(autoincrement())
-   employee_id String?
-  companyEmail String?
-  department String?
-  employee Employee? @relation(fields: [employee_id], references: [employee_id])
-  totalLeaves Int @default(25)
-  acceptedLeaves Int @default(0)
-  rejectedLeaves Int @default(0)
-  expiredLeaves Int @default(0)
-  carryOverLeaves Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+model LeaveBalance {
+  leaveBalanceId  Int       @id @default(autoincrement())
+  employee_id     String?
+  companyEmail    String?
+  department      String?
+  employee        Employee? @relation(fields: [employee_id], references: [employee_id])
+  totalLeaves     Int       @default(25)
+  acceptedLeaves  Int       @default(0)
+  rejectedLeaves  Int       @default(0)
+  expiredLeaves   Int       @default(0)
+  carryOverLeaves Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
 }
-model LeaveType{
-  id Int @id @default(autoincrement())
+
+model LeaveType {
+  id        Int     @id @default(autoincrement())
   LeaveName String? @unique
-  Type String?
+  Type      String?
   LeaveUnit String?
-  Status String?
-  Note String?
+  Status    String?
+  Note      String?
 }
 
 model Team {
-  id             Int        @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   teamName       String?
   description    String?
   departmentName String?
-  teamLeadName String?
-  teamLeadId     String? @unique
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  employee Employee? @relation(fields: [teamLeadId], references: [employee_id]) 
-
+  teamLeadName   String?
+  teamLeadId     String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  employee       Employee? @relation(fields: [teamLeadId], references: [employee_id])
 }
+
 model teamMember {
   id         Int      @id @default(autoincrement())
   teamId     Int
   employeeId String
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now())
+
   @@unique([teamId, employeeId])
 }
 
 model employeeLeaves {
-  id         Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   employee_id String?
-  leaveType  String
-  employee Employee? @relation(fields: [employee_id], references: [employee_id])
-  startDate  DateTime? 
-  endDate    DateTime?
-  Duration   String? 
-  status     String?
-  Reason     String?
-  Comments   String?
+  leaveType   String
+  employee    Employee? @relation(fields: [employee_id], references: [employee_id])
+  startDate   DateTime?
+  endDate     DateTime?
+  Duration    String?
+  status      String?
+  Reason      String?
+  Comments    String?
 }
 
 model Salary {
-  salary_id  Int      @id @default(autoincrement())
-  employee_id String 
+  salary_id   Int       @id @default(autoincrement())
+  employee_id String
   amount      Float?
   start_Date  DateTime?
   end_Date    DateTime?
   createdAt   DateTime?
-  updatedAt   DateTime ?@updatedAt
-  employee    Employee @relation(fields: [employee_id], references: [employee_id])
+  updatedAt   DateTime? @updatedAt
+  employee    Employee  @relation(fields: [employee_id], references: [employee_id])
 }
 
 model Projects {
-  project_id   Int      @id @default(autoincrement())
-  project_Name String
-  start_Date   DateTime
-  projectTeam  String?
-  end_Date     DateTime
-  budget       Float
-  manager_id   Int
-  createdAt    DateTime
-  updatedAt    DateTime @updatedAt
+  project_id       Int                @id @default(autoincrement())
+  project_Name     String
+  start_Date       DateTime
+  projectTeam      String?
+  end_Date         DateTime
+  budget           Float
+  manager_id       Int
+  createdAt        DateTime
+  updatedAt        DateTime           @updatedAt
   employeeProjects employeeProjects[]
 }
 
 model employeeReports {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   employeeId    String?
   employeeEmail String?
   report        String
   employee      Employee? @relation(fields: [employeeId], references: [employee_id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
 }
 
 model employeeProjects {
@@ -212,7 +293,7 @@ model employeeProjects {
   project_id          Int
   role                String
   start_Date          DateTime
-  end_Date            DateTime 
+  end_Date            DateTime
   createdAt           DateTime
   updatedAt           DateTime @updatedAt
   employee            Employee @relation(fields: [employee_id], references: [employee_id])
@@ -223,7 +304,7 @@ model employeeProjects {
 enum Role {
   Employee
   Admin
-  Intern 
+  Intern
   Manager
 }
 
@@ -236,7 +317,7 @@ model Notification {
   id         String   @id @default(uuid())
   employeeId String
   message    String
-  type       String   // LEAVE_APPROVED, LEAVE_REJECTED, REPORT_PENDING, etc.
+  type       String // LEAVE_APPROVED, LEAVE_REJECTED, REPORT_PENDING, etc.
   isRead     Boolean  @default(false)
   createdAt  DateTime @default(now())
   employee   Employee @relation(fields: [employeeId], references: [employee_id])
@@ -252,7 +333,6 @@ model OTP {
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
-
 
 model Suggestion {
   id        Int      @id @default(autoincrement())

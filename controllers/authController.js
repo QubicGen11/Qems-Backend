@@ -62,10 +62,10 @@ const registerUser = async (req, res) => {
     }
 
     // Email validation
-    const emailRegex = /^[^\s@]+@qubicgen\.com$/;
+    const emailRegex = /^[^\s@]+@(qubicgen\.com|gmail\.com)$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ 
-        message: 'Invalid email format. Email must be from @qubicgen.com domain' 
+      message: 'Invalid email format. Email must be from @qubicgen.com or @gmail.com domain' 
       });
     }
     
@@ -328,6 +328,8 @@ const loginUser = async (req, res) => {
         role: true,
         status: true,
         department: true,
+        subDepartment: true,
+        mainPosition: true, // Added mainPosition
         username: true
       }
     });
@@ -352,12 +354,32 @@ const loginUser = async (req, res) => {
       return res.status(400).send('Please provide valid username and password');
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        subDepartment: user.subDepartment,
+        mainPosition: user.mainPosition, // Added mainPosition
+        username: user.username,
+        status: user.status
+      },
+      jwtSecret,
+      { expiresIn: '1h' }
+    );
+
+    console.log('Generated Token:', token);
+
     return res.status(200).json({ 
       message: 'Login successful',
+      token, // Return the token
       user: {
         email: user.email,
         role: user.role,
         department: user.department,
+        subDepartment: user.subDepartment,
+        mainPosition: user.mainPosition, // Added mainPosition
         username: user.username,
         status: user.status
       }

@@ -21,6 +21,7 @@ const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
 const notificationRoutes = require('./routes/notificationRoutes');
 const suggestionRoutes = require('./routes/suggestionRoutes');
+const cmsRoutes = require('./routes/cmsRoutes')
 const bodyParser = require('body-parser');
 const os = require('os');
 
@@ -76,6 +77,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
 app.use('/qubinest', notificationRoutes);
 app.use('/documents', documentRouter);
+app.use('/qems/cms', authenticateToken, cmsRoutes); // Ensure this route uses the token verification middleware
+// app.use('/qubinest', cmsRoutes); // Ensure this route uses the token verification middleware
 
 // Set view engine to EJS
 app.set('view engine', 'ejs');
