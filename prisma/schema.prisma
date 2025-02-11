@@ -17,7 +17,7 @@ model CMSEntry {
   createdByUserId     String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  callStatus          CallStatus?
+  callStatus          CallStatus? 
   status              FollowUpStatus?
   assignedTo          String?  // New field to track the assigned executive
 
@@ -64,6 +64,7 @@ model CMSLog {
 }
 
 enum CallStatus {
+  NONE
   ANSWERED
   UNANSWERED
   SWITCH_OFF
@@ -72,6 +73,7 @@ enum CallStatus {
 }
 
 enum FollowUpStatus {
+  NEW
   INTERESTED
   NOT_INTERESTED
   FOLLOW_UP

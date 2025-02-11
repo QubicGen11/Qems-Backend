@@ -37,4 +37,6 @@ router.get('/logs', verifyToken, cmsController.getCMSLogs);
 
 router.get('/users/lead-gen-executives', verifyToken, cmsController.getLeadGenAndExecutives);
 
+router.get('/entries/counts', verifyToken, cmsController.getCMSCounts);
+
 module.exports = router;

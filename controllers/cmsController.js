@@ -6,7 +6,9 @@ const prisma = new PrismaClient();
 
 // Middleware to check access
 const checkAccess = (user, requiredDepartments, requiredPositions) => {
-    return requiredDepartments.includes(user.department) && requiredPositions.includes(user.mainPosition);
+    console.log("User: " + user)
+    console.log("Required Positions: " + requiredPositions , requiredDepartments)
+    return requiredDepartments.includes(user.role) && requiredPositions.includes(user.mainPosition) ;
 };
 
 // Configure Multer for file uploads
@@ -18,7 +20,7 @@ exports.createCMSEntry = async (req, res) => {
         console.log("User:", user);
 
         // If user role is Admin, allow creation without additional checks
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.mainPosition === 'Lead Generation' || user.mainPosition === 'Executive')   {
             console.log("User role is Admin, proceeding with creation");
         } else {
             // Allowed roles
@@ -133,7 +135,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             }
 
             const user = req.user;
-            if (!checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern'])) {
+            if (!((user.role !== 'Admin') || user.mainPosition !== 'Lead Generation')) {
                 return res.status(403).json({ success: false, message: 'Access Denied' });
             }
 
@@ -143,11 +145,32 @@ exports.validateAndImportCMSEntry = async (req, res) => {
 
             console.log('Processing Excel file:', req.file.path);
 
+            // const excelData = excelToJson({
+            //     sourceFile: req.file.path,
+            //     header: { rows: 1 },
+            //     columnToKey: { A: 'name', B: 'contact', C: 'email', D: 'branch', E: 'comfortableLanguage', F: 'assignedTo' }, defaultValues: { assignedTo: user.email }
+            // });
+
             const excelData = excelToJson({
                 sourceFile: req.file.path,
                 header: { rows: 1 },
-                columnToKey: { A: 'name', B: 'contact', C: 'email', D: 'branch', E: 'comfortableLanguage' }
+                columnToKey: { 
+                    A: 'name', 
+                    B: 'contact', 
+                    C: 'email', 
+                    D: 'branch', 
+                    E: 'comfortableLanguage', 
+                    F: 'assignedTo'  // Even if 'assignedTo' is in Excel, we override it manually
+                }
             });
+            
+            // ✅ Manually override assignedTo for each entry
+            if (excelData.Sheet1) {
+                excelData.Sheet1 = excelData.Sheet1.map(entry => ({
+                    ...entry,
+                    assignedTo: user.email  // ✅ Always set assignedTo from the token
+                }));
+            }
 
             console.log('Excel data:', excelData);
 
@@ -157,20 +180,20 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             const seenEmails = new Set();
 
             for (const entry of excelData.Sheet1) {
-                if (!entry.name || !entry.contact || !entry.email || !entry.branch || !entry.comfortableLanguage) {
+                if (!entry.name || !entry.contact.toString() || !entry.email || !entry.branch || !entry.comfortableLanguage || !user.email) {
                     invalidEntries.push({ ...entry, reason: "Missing required fields" });
                     continue;
                 }
 
-                if (seenContacts.has(entry.contact) || seenEmails.has(entry.email)) {
+                if (seenContacts.has(entry.contact.toString()) || seenEmails.has(entry.email)) {
                     invalidEntries.push({ ...entry, reason: "Duplicate entry in Excel file" });
                     continue;
                 }
-                seenContacts.add(entry.contact);
+                seenContacts.add(entry.contact.toString());
                 seenEmails.add(entry.email);
 
                 const existingEntry = await prisma.cMSEntry.findFirst({
-                    where: { OR: [{ email: entry.email }, { contact: entry.contact }] }
+                    where: { OR: [{ email: entry.email }, { contact: entry.contact.toString() }] }
                 });
 
                 if (existingEntry) {
@@ -192,6 +215,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                     const newEntry = await prisma.cMSEntry.create({
                         data: {
                             ...entry,
+                            contact: entry.contact.toString(), // Convert contact to string
                             createdByUserId: user.email
                         }
                     });
@@ -300,7 +324,7 @@ exports.getCommentsByEntryId = async (req, res) => {
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
-  };
+};
 
 // Update Call Status or Follow-Up Status
 exports.updateStatus = async (req, res) => {
@@ -512,14 +536,10 @@ exports.deleteCMSEntry = async (req, res) => {
         const { id } = req.params;
 
         // Check access control
-        if (!checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern'])) {
-            return res.status(403).json({ success: false, message: 'Access Denied' });
-        }
+     
 
         // Ensure only Lead Generation or Admin can delete the entry
-        if (!(user.mainPosition === 'Lead Generation' || user.role === 'Admin')) {
-            return res.status(403).json({ success: false, message: 'Only Lead Generation or Admin can delete the entry' });
-        }
+
 
         // Check if the entry exists
         const entry = await prisma.cMSEntry.findUnique({
@@ -584,6 +604,63 @@ exports.getLeadGenAndExecutives = async (req, res) => {
     }
   };
   
+
+  exports.getCMSCounts = async (req, res) => {
+    try {
+        const user = req.user;
+
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        console.log("Checking against allowed roles:", allowedRoles);
+        console.log("User role:", user.mainPosition);
+
+        if (!allowedRoles.includes(user.mainPosition) && user.role !== 'Admin') {
+            console.log("Access denied - user role not in allowed list");
+            return res.status(403).json({ success: false, message: 'Access Denied' });
+        }
+
+        let filter = {};
+        
+        // If the user is an Executive, filter by assignedTo
+        if (user.mainPosition === 'Executive') {
+            filter = { assignedTo: user.email };
+        }
+
+        // Fetch count for different categories
+        const [totalCompleted, activeContacts, pendingFollowUp, assignedLeads, totalLeads] = await Promise.all([
+            prisma.cMSEntry.count({
+                where: { ...filter, status: 'COMPLETE' }
+            }),
+            prisma.cMSEntry.count({
+                where: { ...filter, status: { not: 'COMPLETE' } }
+            }),
+            prisma.cMSEntry.count({
+                where: { ...filter, status: 'FOLLOW_UP' }
+            }),
+            prisma.cMSEntry.count({
+                where: { assignedTo: user.email }
+            }),
+            prisma.cMSEntry.count({
+                where: { ...filter }
+            })
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalCompleted,
+                activeContacts,
+                pendingFollowUp,
+                assignedLeads,
+                totalLeads
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching CMS counts:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 
 
 
