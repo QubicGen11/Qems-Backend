@@ -366,7 +366,7 @@ const loginUser = async (req, res) => {
         status: user.status
       },
       jwtSecret,
-      { expiresIn: '1h' }
+      { expiresIn: '10h' }
     );
 
     console.log('Generated Token:', token);

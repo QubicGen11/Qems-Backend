@@ -33,13 +33,16 @@ model CMSEntryComment {
   entryId        String
   entry          CMSEntry @relation(name: "CMSEntry_Comments", fields: [entryId], references: [id], onDelete: Cascade)
   postedByUserId String
+  postedByUsername String? // Make it optional first
   postedAt       DateTime @default(now())
   comment        String
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
 
-  // Explicit relation with User
-  postedByUser User @relation(name: "PostedByUser", fields: [postedByUserId], references: [email])
+  // Relation with User
+  postedByUser   User @relation(name: "PostedByUser", fields: [postedByUserId], references: [email])
 }
+
+
 
 model CMSLog {
   id                String   @id @default(uuid())

@@ -27,7 +27,7 @@ router.delete('/entries/:id', verifyToken, cmsController.deleteCMSEntry);
 router.post('/entries/:id/comments', verifyToken, cmsController.addComment);
 
 // Update Call Status or Follow-Up Status
-router.patch('/entries/:id/status', verifyToken, cmsController.updateStatus);
+router.put('/entries/:id/status', verifyToken, cmsController.updateStatus);
 
 // Log Action
 router.post('/logs', verifyToken, cmsController.logAction);

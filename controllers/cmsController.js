@@ -17,61 +17,112 @@ exports.createCMSEntry = async (req, res) => {
         const user = req.user;
         console.log("User:", user);
 
-        // Ensure only Lead Generation or Admin can create a CMS entry
-        if (!(user.mainPosition === 'Lead Generation' || user.role === 'Admin')) {
-            return res.status(403).json({ success: false, message: 'Only Lead Generation or Admin can create a CMS entry' });
+        // If user role is Admin, allow creation without additional checks
+        if (user.role === 'Admin') {
+            console.log("User role is Admin, proceeding with creation");
+        } else {
+            // Allowed roles
+            const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+            console.log("Checking against allowed roles:", allowedRoles);
+            console.log("User mainPosition:", user.mainPosition);
+            console.log("User role:", user.role);
+
+            if (!allowedRoles.includes(user.mainPosition)) {
+                console.log("Access denied - user role not in allowed list");
+                return res.status(403).json({ success: false, message: 'Access Denied' });
+            }
+
+            // Check permission with checkAccess()
+            const accessCheck = checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern']);
+            console.log("Access check result:", accessCheck);
+            if (!accessCheck) {
+                return res.status(403).json({ success: false, message: 'Access Denied by checkAccess()' });
+            }
         }
 
-        if (!checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern'])) {
-            return res.status(403).json({ success: false, message: 'Access Denied' });
-        }
+        const { name, contact, email, branch, comfortableLanguage, assignedTo, comment } = req.body;
 
-        const { name, contact, email, branch, comfortableLanguage, assignedTo } = req.body;
-
+        // Validate required fields
         if (!name || !contact || !email || !branch || !comfortableLanguage || !assignedTo) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
 
-        // Check if contact already exists
-        const existingEntry = await prisma.cMSEntry.findFirst({
-            where: { OR: [{ email }, { contact }] }
-        });
-
-        if (existingEntry) {
-            return res.status(409).json({ success: false, message: 'Contact already exists' });
+        if (!assignedTo.trim()) {
+            return res.status(400).json({ success: false, message: 'AssignedTo field is required' });
         }
 
-        const newEntry = await prisma.cMSEntry.create({
-            data: {
-                name,
-                contact,
-                email,
-                branch,
-                comfortableLanguage,
-                createdByUserId: user.email,
-                assignedTo
+        // Check if contact already exists
+        if (email && contact) {
+            const existingEntry = await prisma.cMSEntry.findFirst({
+                where: {
+                    OR: [
+                        { email: { equals: email, mode: "insensitive" } },
+                        { contact: { equals: contact, mode: "insensitive" } }
+                    ]
+                }
+            });
+
+            if (existingEntry) {
+                return res.status(409).json({ success: false, message: 'Contact already exists' });
             }
+        }
+
+        // Create entry using transaction
+        const result = await prisma.$transaction(async (prisma) => {
+            // Create CMS entry
+            const newEntry = await prisma.cMSEntry.create({
+                data: {
+                    name,
+                    contact,
+                    email,
+                    branch,
+                    comfortableLanguage,
+                    createdByUserId: user.email,
+                    assignedTo
+                }
+            });
+
+            // If comment is provided, create a comment entry
+            if (comment && comment.trim()) {
+                await prisma.cMSEntryComment.create({
+                    data: {
+                        entryId: newEntry.id,
+                        postedByUserId: user.email,
+                        postedByUsername: user.username || user.email,
+                        comment: comment.trim(),
+                        postedAt: new Date()
+                    }
+                });
+            }
+
+            // Log creation action
+            await prisma.cMSLog.create({
+                data: {
+                    action: 'CREATED',
+                    details: `Entry '${newEntry.name}' was created by ${user.username || user.email}${comment ? ' with initial comment' : ''}`,
+                    performedByUserId: user.email,
+                    performedBy: user.username || user.email,
+                    department: user.department,
+                    role: user.role,
+                    timestamp: new Date(),
+                }
+            });
+
+            return newEntry;
         });
 
-        // Log the creation action
-        await prisma.cMSLog.create({
-            data: {
-                action: 'CREATED',
-                details: `Entry '${newEntry.name}' was created by ${user.username || user.email}`,
-                performedByUserId: user.email,
-                performedBy: user.username || user.email,
-                department: user.department,
-                role: user.role,
-                timestamp: new Date(),
-            }
+        return res.status(201).json({ 
+            success: true, 
+            message: `Contact created successfully${comment ? ' with initial comment' : ''}`, 
+            data: result 
         });
 
-        return res.status(201).json({ success: true, message: "Contact created successfully", data: newEntry });
     } catch (error) {
         console.error('Error creating single CMS entry:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
 
 // ✅ **Step 1: Validate Data - No Database Insertion**
 exports.validateAndImportCMSEntry = async (req, res) => {
@@ -206,6 +257,7 @@ exports.addComment = async (req, res) => {
                 entryId,
                 comment,
                 postedByUserId: user.email,
+                postedByUsername:user.username 
             },
         });
 
@@ -254,25 +306,39 @@ exports.getCommentsByEntryId = async (req, res) => {
 exports.updateStatus = async (req, res) => {
     try {
         const user = req.user;
+        console.log('User:', user);
+        console.log('User main position:', user.mainPosition);
+        console.log('User role:', user.role);
 
-        if (!(user.mainPosition === 'Executive' || user.mainPosition === 'Lead Generation' || user.role === 'Admin')) {
+        if (!(
+            user.mainPosition?.toLowerCase() === 'executive' ||
+            user.mainPosition?.toLowerCase() === 'lead generation' ||
+            user.role?.toLowerCase() === 'admin'
+          )) {
             return res.status(403).json({ success: false, message: 'Access Denied' });
-        }
-
+          }
+          
         const { id } = req.params;
         const { callStatus, status } = req.body;
+        
+        console.log('Entry ID:', id);
+        console.log('Call Status:', callStatus);
+        console.log('Status:', status);
 
         // Check if the entry exists
         const entry = await prisma.cMSEntry.findUnique({
             where: { id },
         });
+        console.log('Found entry:', entry);
 
         if (!entry) {
             return res.status(404).json({ success: false, message: 'Entry not found' });
         }
 
         // Ensure only the assigned executive can update the entry
-        if (entry.assignedTo !== user.email && user.role !== 'Admin') {
+        console.log('Entry assigned to:', entry.assignedTo);
+        console.log('User email:', user.email);
+        if (entry.assignedTo !== user.email && user.role !== 'Admin' && user.mainPosition !== 'Lead Generation') {
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
 
@@ -280,9 +346,10 @@ exports.updateStatus = async (req, res) => {
             where: { id },
             data: { callStatus, status },
         });
+        console.log('Updated entry:', updatedEntry);
 
         // Log the update action
-        await prisma.cMSLog.create({
+        const logEntry = await prisma.cMSLog.create({
             data: {
                 action: 'UPDATED',
                 details: `Entry '${updatedEntry.name}' status was updated by ${user.username || user.email}`,
@@ -293,9 +360,11 @@ exports.updateStatus = async (req, res) => {
                 timestamp: new Date(),
             }
         });
+        console.log('Created log entry:', logEntry);
 
         res.status(200).json({ success: true, data: updatedEntry });
     } catch (error) {
+        console.error('Error in updateStatus:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -306,9 +375,14 @@ exports.getAllCMSEntries = async (req, res) => {
     try {
         const user = req.user;
 
-        if (!checkAccess(user, ['Product Management'], ['Lead Generation', 'Executive', 'Admin', 'intern'])) {
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        console.log("Checking against allowed roles:", allowedRoles);
+        console.log("User role:", user.mainPosition);
+        if (!allowedRoles.includes(user.mainPosition) && user.role !== 'Admin') {
+            console.log("Access denied - user role not in allowed list");
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
+        
 
         let entries;
         if (user.mainPosition === 'Executive') {
@@ -368,7 +442,7 @@ exports.getCMSLogs = async (req, res) => {
     try {
         const user = req.user;
 
-        if (!checkAccess(user, ['Product Management'], ['Lead Generation', 'Executive', 'Admin', 'intern'])) {
+        if (user.role !== 'Admin') {
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
 
@@ -395,13 +469,17 @@ exports.editCMSEntry = async (req, res) => {
         const { id } = req.params;
         const { name, contact, email, branch, comfortableLanguage, assignedTo } = req.body;
 
-        if (!checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern'])) {
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        console.log("Checking against allowed roles:", allowedRoles);
+        console.log("User role:", user.mainPosition);
+        if (!allowedRoles.includes(user.mainPosition) && user.role !== 'Admin') {
+            console.log("Access denied - user role not in allowed list");
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
 
         // Ensure only Lead Generation or Admin can edit the assignedTo field
-        if (assignedTo && !(user.mainPosition === 'Lead Generation' || user.role === 'Admin')) {
-            return res.status(403).json({ success: false, message: 'Only Lead Generation or Admin can edit the assignedTo field' });
+        if (assignedTo && !(user.mainPosition === 'Lead Generation' || user.role === 'Admin' || user.mainPosition === 'Executive')) {
+            return res.status(403).json({ success: false, message: 'Only Lead Generation, Executive or Admin can edit the assignedTo field' });
         }
 
         const updatedEntry = await prisma.cMSEntry.update({
