@@ -9,7 +9,9 @@ const {
     resendOTP,
     updateUserStatus,
     forgotPassword,
-    verifyForgotPasswordOTP
+    verifyForgotPasswordOTP,
+    refreshTokenHandler,
+    refreshToken
 } = require('../controllers/authController');
 
 
@@ -18,6 +20,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
+// router.post('/refreshtoken', refreshToken);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 router.put('/changepassword', changePassword);
