@@ -45,7 +45,10 @@ exports.createCMSEntry = async (req, res) => {
         const { name, contact, email, branch, comfortableLanguage, assignedTo, comment } = req.body;
 
         // Validate required fields
-        if (!name || !contact || !email || !branch || !comfortableLanguage || !assignedTo) {
+        // if (!name || !contact || !email || !branch || !comfortableLanguage || !assignedTo) {
+        //     return res.status(400).json({ success: false, message: 'Missing required fields' });
+        // }
+        if (!name || !contact ) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
 
@@ -180,7 +183,11 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             const seenEmails = new Set();
 
             for (const entry of excelData.Sheet1) {
-                if (!entry.name || !entry.contact.toString() || !entry.email || !entry.branch || !entry.comfortableLanguage || !user.email) {
+                // if (!entry.name || !entry.contact.toString() || !entry.email || !entry.branch || !entry.comfortableLanguage || !user.email) {
+                //     invalidEntries.push({ ...entry, reason: "Missing required fields" });
+                //     continue;
+                // }
+                if (!entry.name || !entry.contact.toString() || !user.email) {
                     invalidEntries.push({ ...entry, reason: "Missing required fields" });
                     continue;
                 }

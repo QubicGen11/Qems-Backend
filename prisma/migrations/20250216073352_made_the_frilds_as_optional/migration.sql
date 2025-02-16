@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "CMSEntry" ALTER COLUMN "email" DROP NOT NULL,
+ALTER COLUMN "branch" DROP NOT NULL,
+ALTER COLUMN "comfortableLanguage" DROP NOT NULL;
