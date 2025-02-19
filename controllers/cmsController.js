@@ -400,6 +400,7 @@ exports.updateStatus = async (req, res) => {
 
         if (!(
             user.mainPosition?.toLowerCase() === 'executive' ||
+            user.mainPosition?.toLowerCase() === 'product manager' ||
             user.mainPosition?.toLowerCase() === 'lead generation' ||
             user.role?.toLowerCase() === 'admin'
         )) {
@@ -426,7 +427,7 @@ exports.updateStatus = async (req, res) => {
         // Ensure only the assigned executive can update the entry
         console.log('Entry assigned to:', entry.assignedTo);
         console.log('User email:', user.email);
-        if (entry.assignedTo !== user.email && user.role !== 'Admin' && user.mainPosition !== 'Lead Generation') {
+        if (entry.assignedTo !== user.email && user.role !== 'Admin' && user.mainPosition !== 'Product Manager' && user.mainPosition !== 'Executive') {
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
 
@@ -463,7 +464,7 @@ exports.getAllCMSEntries = async (req, res) => {
     try {
         const user = req.user;
 
-        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern' , 'Product Manager'];
         console.log("Checking against allowed roles:", allowedRoles);
         console.log("User role:", user.mainPosition);
         if (!allowedRoles.includes(user.mainPosition) && user.role !== 'Admin') {
@@ -563,7 +564,7 @@ exports.editCMSEntry = async (req, res) => {
             projectedAmount, preRegisteredAmount
         } = req.body;
 
-        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern' ,'Product Manager'];
         console.log("Checking against allowed roles:", allowedRoles);
         console.log("User role:", user.mainPosition);
 
@@ -573,7 +574,7 @@ exports.editCMSEntry = async (req, res) => {
         }
 
         // Ensure only Lead Generation, Executive, or Admin can edit the assignedTo field
-        if (assignedTo && !(user.mainPosition === 'Lead Generation' || user.role === 'Admin' || user.mainPosition === 'Executive')) {
+        if (assignedTo && !(user.mainPosition === 'Lead Generation' || user.role === 'Admin' || user.mainPosition === 'Executive' || user.mainPosition === 'Product Manager' )) {
             return res.status(403).json({ success: false, message: 'Only Lead Generation, Executive, or Admin can edit the assignedTo field' });
         }
 
@@ -705,7 +706,7 @@ exports.getCMSCounts = async (req, res) => {
     try {
         const user = req.user;
 
-        const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern' , 'Product Manager'];
         console.log("Checking against allowed roles:", allowedRoles);
         console.log("User role:", user.mainPosition);
 
