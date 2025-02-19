@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "CMSEntry" ALTER COLUMN "assignedTo" DROP NOT NULL,
+ALTER COLUMN "assignedTo" SET DATA TYPE TEXT;

@@ -7,8 +7,8 @@ const prisma = new PrismaClient();
 // Middleware to check access
 const checkAccess = (user, requiredDepartments, requiredPositions) => {
     console.log("User: " + user)
-    console.log("Required Positions: " + requiredPositions , requiredDepartments)
-    return requiredDepartments.includes(user.role) && requiredPositions.includes(user.mainPosition) ;
+    console.log("Required Positions: " + requiredPositions, requiredDepartments)
+    return requiredDepartments.includes(user.role) && requiredPositions.includes(user.mainPosition);
 };
 
 // Configure Multer for file uploads
@@ -20,7 +20,7 @@ exports.createCMSEntry = async (req, res) => {
         console.log("User:", user);
 
         // If user role is Admin, allow creation without additional checks
-        if (user.role === 'Admin' || user.mainPosition === 'Lead Generation' || user.mainPosition === 'Executive')   {
+        if (user.role === 'Admin' || user.mainPosition === 'Lead Generation' || user.mainPosition === 'Executive' || user.mainPosition === 'Product Manager') {
             console.log("User role is Admin, proceeding with creation");
         } else {
             // Allowed roles
@@ -35,26 +35,43 @@ exports.createCMSEntry = async (req, res) => {
             }
 
             // Check permission with checkAccess()
-            const accessCheck = checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern']);
+            const accessCheck = checkAccess(user, ['Product Management'], ['Admin', 'Lead Generation', 'Executive', 'intern', 'Product Manager']);
             console.log("Access check result:", accessCheck);
             if (!accessCheck) {
                 return res.status(403).json({ success: false, message: 'Access Denied by checkAccess()' });
             }
         }
 
-        const { name, contact, email, branch, comfortableLanguage, assignedTo, comment } = req.body;
+        // Destructure request body with new fields
+        let {
+            name, contact, email, branch, comfortableLanguage, assignedTo, comment,
+            collegeName, yearOfStudying, courseOpt, registeredMonth,
+            projectedAmount, preRegisteredAmount
+        } = req.body;
 
         // Validate required fields
-        // if (!name || !contact || !email || !branch || !comfortableLanguage || !assignedTo) {
-        //     return res.status(400).json({ success: false, message: 'Missing required fields' });
-        // }
-        if (!name || !contact ) {
-            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        if (!email && !contact) {
+            return res.status(400).json({ success: false, message: 'At least one of email or contact field is required' });
         }
 
-        if (!assignedTo.trim()) {
-            return res.status(400).json({ success: false, message: 'AssignedTo field is required' });
+        if (assignedTo) {
+            if (!(user.mainPosition === 'Product Manager' || user.role === 'Admin' || user.mainPosition === 'Executive' || user.mainPosition === 'Lead Generation')) {
+                return res.status(403).json({ success: false, message: 'Only Product Manager or Admin can assign the assignedTo field' });
+            } else {
+                // If assignedTo is not provided, apply automatic assignment logic
+                if (user.mainPosition === 'Executive') {
+                    assignedTo = user.email; // Assign to the Executive itself
+                } else if (user.mainPosition === 'Lead Generation') {
+                    assignedTo = ""; // Set assignedTo as empty for Lead Generation
+                }
+            }
         }
+
+
+        // Ensure financial values are properly parsed
+        const parsedProjectedAmount = projectedAmount ? parseFloat(projectedAmount) : 0;
+        const parsedPreRegisteredAmount = preRegisteredAmount ? parseFloat(preRegisteredAmount) : 0;
+        const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount; // Auto-calculate remaining amount
 
         // Check if contact already exists
         if (email && contact) {
@@ -74,7 +91,7 @@ exports.createCMSEntry = async (req, res) => {
 
         // Create entry using transaction
         const result = await prisma.$transaction(async (prisma) => {
-            // Create CMS entry
+            // Create CMS entry with auto-calculated remainingAmount
             const newEntry = await prisma.cMSEntry.create({
                 data: {
                     name,
@@ -82,8 +99,15 @@ exports.createCMSEntry = async (req, res) => {
                     email,
                     branch,
                     comfortableLanguage,
+                    assignedTo,
+                    collegeName,
+                    yearOfStudying: yearOfStudying ? parseInt(yearOfStudying) : null,
+                    courseOpt,
+                    registeredMonth,
+                    projectedAmount: parsedProjectedAmount,
+                    preRegisteredAmount: parsedPreRegisteredAmount,
+                    remainingAmount, // Auto-calculated remainingAmount
                     createdByUserId: user.email,
-                    assignedTo
                 }
             });
 
@@ -116,10 +140,10 @@ exports.createCMSEntry = async (req, res) => {
             return newEntry;
         });
 
-        return res.status(201).json({ 
-            success: true, 
-            message: `Contact created successfully${comment ? ' with initial comment' : ''}`, 
-            data: result 
+        return res.status(201).json({
+            success: true,
+            message: `Contact created successfully${comment ? ' with initial comment' : ''}`,
+            data: result
         });
 
     } catch (error) {
@@ -127,6 +151,8 @@ exports.createCMSEntry = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+
 
 
 // ✅ **Step 1: Validate Data - No Database Insertion**
@@ -148,32 +174,39 @@ exports.validateAndImportCMSEntry = async (req, res) => {
 
             console.log('Processing Excel file:', req.file.path);
 
-            // const excelData = excelToJson({
-            //     sourceFile: req.file.path,
-            //     header: { rows: 1 },
-            //     columnToKey: { A: 'name', B: 'contact', C: 'email', D: 'branch', E: 'comfortableLanguage', F: 'assignedTo' }, defaultValues: { assignedTo: user.email }
-            // });
-
+            // Convert Excel data to JSON
             const excelData = excelToJson({
                 sourceFile: req.file.path,
                 header: { rows: 1 },
-                columnToKey: { 
-                    A: 'name', 
-                    B: 'contact', 
-                    C: 'email', 
-                    D: 'branch', 
-                    E: 'comfortableLanguage', 
-                    F: 'assignedTo'  // Even if 'assignedTo' is in Excel, we override it manually
+                columnToKey: {
+                    A: 'name',
+                    B: 'contact',
+                    C: 'email',
+                    D: 'branch',
+                    E: 'comfortableLanguage',
+                    F: 'assignedTo',
+                    G: 'collegeName',
+                    H: 'yearOfStudying',
+                    I: 'courseOpt',
+                    J: 'registeredMonth',
+                    K: 'projectedAmount',
+                    L: 'preRegisteredAmount'
                 }
             });
-            
-            // ✅ Manually override assignedTo for each entry
+
+            // ✅ Ensure `assignedTo` is set for all entries from the logged-in user
             if (excelData.Sheet1) {
                 excelData.Sheet1 = excelData.Sheet1.map(entry => ({
                     ...entry,
-                    assignedTo: user.email  // ✅ Always set assignedTo from the token
+                    assignedTo: 
+                        (user.mainPosition === 'Product Manager' || user.role === 'Admin') 
+                            ? entry.assignedTo // Keep the assignedTo from the uploaded file
+                        : (user.mainPosition === 'Executive') 
+                            ? user.email // Assign to itself if Executive
+                        : "" // If the user is Lead Generation, set assignedTo as empty
                 }));
             }
+            
 
             console.log('Excel data:', excelData);
 
@@ -183,15 +216,13 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             const seenEmails = new Set();
 
             for (const entry of excelData.Sheet1) {
-                // if (!entry.name || !entry.contact.toString() || !entry.email || !entry.branch || !entry.comfortableLanguage || !user.email) {
-                //     invalidEntries.push({ ...entry, reason: "Missing required fields" });
-                //     continue;
-                // }
-                if (!entry.name || !entry.contact.toString() || !user.email) {
-                    invalidEntries.push({ ...entry, reason: "Missing required fields" });
+                // Validate required fields
+                if (!entry.email || !entry.contact.toString() || !user.email) {
+                    invalidEntries.push({ ...entry, reason: "Missing email or contact field" });
                     continue;
                 }
 
+                // Check for duplicate entries within the uploaded file
                 if (seenContacts.has(entry.contact.toString()) || seenEmails.has(entry.email)) {
                     invalidEntries.push({ ...entry, reason: "Duplicate entry in Excel file" });
                     continue;
@@ -199,6 +230,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                 seenContacts.add(entry.contact.toString());
                 seenEmails.add(entry.email);
 
+                // Check if contact or email already exists in the database
                 const existingEntry = await prisma.cMSEntry.findFirst({
                     where: { OR: [{ email: entry.email }, { contact: entry.contact.toString() }] }
                 });
@@ -206,23 +238,47 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                 if (existingEntry) {
                     invalidEntries.push({ ...entry, reason: "Duplicate entry in database" });
                 } else {
-                    validEntries.push(entry);
+                    // Convert numeric fields properly
+                    const parsedProjectedAmount = entry.projectedAmount ? parseFloat(entry.projectedAmount) : 0;
+                    const parsedPreRegisteredAmount = entry.preRegisteredAmount ? parseFloat(entry.preRegisteredAmount) : 0;
+                    const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount;
+
+                    validEntries.push({
+                        ...entry,
+                        contact: entry.contact.toString(), // Convert contact to string
+                        yearOfStudying: entry.yearOfStudying ? parseInt(entry.yearOfStudying) : null,
+                        projectedAmount: parsedProjectedAmount,
+                        preRegisteredAmount: parsedPreRegisteredAmount,
+                        remainingAmount // Auto-calculated remainingAmount
+                    });
                 }
             }
 
             console.log('Validation Summary:', { validEntries, invalidEntries });
 
-            fs.unlinkSync(req.file.path); // Delete file after processing
+            // Delete file after processing
+            fs.unlinkSync(req.file.path);
 
-            // **🚀 Check query param importData=true to insert into DB**
+            // **🚀 If importData=true, insert into DB**
             if (req.query.importData === 'true' && validEntries.length > 0) {
                 const importedEntries = [];
 
                 for (const entry of validEntries) {
                     const newEntry = await prisma.cMSEntry.create({
                         data: {
-                            ...entry,
-                            contact: entry.contact.toString(), // Convert contact to string
+                            name: entry.name,
+                            contact: entry.contact,
+                            email: entry.email,
+                            branch: entry.branch,
+                            comfortableLanguage: entry.comfortableLanguage,
+                            assignedTo: entry.assignedTo,
+                            collegeName: entry.collegeName,
+                            yearOfStudying: entry.yearOfStudying,
+                            courseOpt: entry.courseOpt,
+                            registeredMonth: entry.registeredMonth,
+                            projectedAmount: entry.projectedAmount,
+                            preRegisteredAmount: entry.preRegisteredAmount,
+                            remainingAmount: entry.remainingAmount,
                             createdByUserId: user.email
                         }
                     });
@@ -251,7 +307,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                 });
             }
 
-            // **🚀 Just validate if importData=false**
+            // **🚀 If importData=false, return only validation results**
             return res.status(200).json({
                 success: true,
                 message: "Validation completed.",
@@ -265,6 +321,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
         }
     });
 };
+
 
 
 
@@ -288,7 +345,7 @@ exports.addComment = async (req, res) => {
                 entryId,
                 comment,
                 postedByUserId: user.email,
-                postedByUsername:user.username 
+                postedByUsername: user.username
             },
         });
 
@@ -296,7 +353,7 @@ exports.addComment = async (req, res) => {
         await prisma.cMSLog.create({
             data: {
                 action: 'COMMENT_ADDED',
-                details: `Comment added to entry '${entryId}' by ${user.username || user.email}`,
+                details: `Comment added to entry '${entryId}' '${user.email}' by ${user.username || user.email}`,
                 performedByUserId: user.email,
                 performedBy: user.username || user.email,
                 department: user.department,
@@ -313,23 +370,23 @@ exports.addComment = async (req, res) => {
 
 exports.getCommentsByEntryId = async (req, res) => {
     try {
-      const { entryId } = req.params;
-  
-      console.log("Entry id is "  + entryId);
-  
-      // Fetch all comments for the given entryId
-      const comments = await prisma.cMSEntryComment.findMany({
-        where: { entryId: entryId },
-        orderBy: { createdAt: 'desc' } // Use the correct field for ordering
-      });
-  
-      if (!comments.length) {
-        return res.status(404).json({ success: false, message: 'No comments found for this entry' });
-      }
-  
-      res.status(200).json({ success: true, data: comments });
+        const { entryId } = req.params;
+
+        console.log("Entry id is " + entryId);
+
+        // Fetch all comments for the given entryId
+        const comments = await prisma.cMSEntryComment.findMany({
+            where: { entryId: entryId },
+            orderBy: { createdAt: 'desc' } // Use the correct field for ordering
+        });
+
+        if (!comments.length) {
+            return res.status(404).json({ success: false, message: 'No comments found for this entry' });
+        }
+
+        res.status(200).json({ success: true, data: comments });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
@@ -345,13 +402,13 @@ exports.updateStatus = async (req, res) => {
             user.mainPosition?.toLowerCase() === 'executive' ||
             user.mainPosition?.toLowerCase() === 'lead generation' ||
             user.role?.toLowerCase() === 'admin'
-          )) {
+        )) {
             return res.status(403).json({ success: false, message: 'Access Denied' });
-          }
-          
+        }
+
         const { id } = req.params;
         const { callStatus, status } = req.body;
-        
+
         console.log('Entry ID:', id);
         console.log('Call Status:', callStatus);
         console.log('Status:', status);
@@ -383,7 +440,7 @@ exports.updateStatus = async (req, res) => {
         const logEntry = await prisma.cMSLog.create({
             data: {
                 action: 'UPDATED',
-                details: `Entry '${updatedEntry.name}' status was updated by ${user.username || user.email}`,
+                details: `Entry '${updatedEntry.name}' email : ${updatedEntry.email} status was updated by ${user.username || user.email}`,
                 performedByUserId: user.email,
                 performedBy: user.username || user.email,
                 department: user.department,
@@ -413,7 +470,7 @@ exports.getAllCMSEntries = async (req, res) => {
             console.log("Access denied - user role not in allowed list");
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
-        
+
 
         let entries;
         if (user.mainPosition === 'Executive') {
@@ -498,24 +555,53 @@ exports.editCMSEntry = async (req, res) => {
     try {
         const user = req.user;
         const { id } = req.params;
-        const { name, contact, email, branch, comfortableLanguage, assignedTo } = req.body;
+
+        // Extract all fields from request body
+        const {
+            name, contact, email, branch, comfortableLanguage, assignedTo,
+            collegeName, yearOfStudying, courseOpt, registeredMonth,
+            projectedAmount, preRegisteredAmount
+        } = req.body;
 
         const allowedRoles = ['Lead Generation', 'Executive', 'intern'];
         console.log("Checking against allowed roles:", allowedRoles);
         console.log("User role:", user.mainPosition);
+
         if (!allowedRoles.includes(user.mainPosition) && user.role !== 'Admin') {
             console.log("Access denied - user role not in allowed list");
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
 
-        // Ensure only Lead Generation or Admin can edit the assignedTo field
+        // Ensure only Lead Generation, Executive, or Admin can edit the assignedTo field
         if (assignedTo && !(user.mainPosition === 'Lead Generation' || user.role === 'Admin' || user.mainPosition === 'Executive')) {
-            return res.status(403).json({ success: false, message: 'Only Lead Generation, Executive or Admin can edit the assignedTo field' });
+            return res.status(403).json({ success: false, message: 'Only Lead Generation, Executive, or Admin can edit the assignedTo field' });
         }
 
+        // Parse numerical fields correctly
+        const parsedProjectedAmount = projectedAmount ? parseFloat(projectedAmount) : 0;
+        const parsedPreRegisteredAmount = preRegisteredAmount ? parseFloat(preRegisteredAmount) : 0;
+
+        // Auto-calculate remainingAmount
+        const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount;
+
+        // Update entry in the database
         const updatedEntry = await prisma.cMSEntry.update({
             where: { id },
-            data: { name, contact, email, branch, comfortableLanguage, ...(assignedTo && { assignedTo }) },
+            data: {
+                name,
+                contact,
+                email,
+                branch,
+                comfortableLanguage,
+                assignedTo,
+                collegeName,
+                yearOfStudying: yearOfStudying ? parseInt(yearOfStudying) : null,
+                courseOpt,
+                registeredMonth,
+                projectedAmount: parsedProjectedAmount,
+                preRegisteredAmount: parsedPreRegisteredAmount,
+                remainingAmount // Auto-updated remainingAmount
+            },
         });
 
         // Log the update action
@@ -532,10 +618,13 @@ exports.editCMSEntry = async (req, res) => {
         });
 
         res.status(200).json({ success: true, data: updatedEntry });
+
     } catch (error) {
+        console.error('Error updating CMS entry:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
 
 exports.deleteCMSEntry = async (req, res) => {
     try {
@@ -543,7 +632,7 @@ exports.deleteCMSEntry = async (req, res) => {
         const { id } = req.params;
 
         // Check access control
-     
+
 
         // Ensure only Lead Generation or Admin can delete the entry
 
@@ -584,35 +673,35 @@ exports.deleteCMSEntry = async (req, res) => {
 
 exports.getLeadGenAndExecutives = async (req, res) => {
     try {
-      // Fetch users where mainPosition is 'Lead Generation' or 'Executive'
-      const users = await prisma.user.findMany({
-        where: {
-          OR: [
-            { mainPosition: 'Lead Generation' },
-            { mainPosition: 'Executive' }
-          ]
-        },
-        select: {
-          employeeId: true,
-          username: true,
-          email: true,
-          role: true,
-          mainPosition: true,
-          department: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: 'desc' } // Sort by latest users first
-      });
-  
-      res.status(200).json({ success: true, data: users });
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  };
-  
+        // Fetch users where mainPosition is 'Lead Generation' or 'Executive'
+        const users = await prisma.user.findMany({
+            where: {
+                OR: [
+                    { mainPosition: 'Lead Generation' },
+                    { mainPosition: 'Executive' }
+                ]
+            },
+            select: {
+                employeeId: true,
+                username: true,
+                email: true,
+                role: true,
+                mainPosition: true,
+                department: true,
+                createdAt: true
+            },
+            orderBy: { createdAt: 'desc' } // Sort by latest users first
+        });
 
-  exports.getCMSCounts = async (req, res) => {
+        res.status(200).json({ success: true, data: users });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+
+exports.getCMSCounts = async (req, res) => {
     try {
         const user = req.user;
 
@@ -626,14 +715,23 @@ exports.getLeadGenAndExecutives = async (req, res) => {
         }
 
         let filter = {};
-        
+
         // If the user is an Executive, filter by assignedTo
         if (user.mainPosition === 'Executive') {
             filter = { assignedTo: user.email };
         }
 
-        // Fetch count for different categories
-        const [totalCompleted, activeContacts, pendingFollowUp, assignedLeads, totalLeads] = await Promise.all([
+        // Fetch count and financial data for different categories
+        const [
+            totalCompleted,
+            activeContacts,
+            pendingFollowUp,
+            assignedLeads,
+            totalLeads,
+            totalProjectedAmount,
+            totalPreRegisteredAmount,
+            totalRemainingAmount
+        ] = await Promise.all([
             prisma.cMSEntry.count({
                 where: { ...filter, status: 'COMPLETE' }
             }),
@@ -648,6 +746,18 @@ exports.getLeadGenAndExecutives = async (req, res) => {
             }),
             prisma.cMSEntry.count({
                 where: { ...filter }
+            }),
+            prisma.cMSEntry.aggregate({
+                _sum: { projectedAmount: true },
+                where: { ...filter }
+            }),
+            prisma.cMSEntry.aggregate({
+                _sum: { preRegisteredAmount: true },
+                where: { ...filter }
+            }),
+            prisma.cMSEntry.aggregate({
+                _sum: { remainingAmount: true },
+                where: { ...filter }
             })
         ]);
 
@@ -658,7 +768,12 @@ exports.getLeadGenAndExecutives = async (req, res) => {
                 activeContacts,
                 pendingFollowUp,
                 assignedLeads,
-                totalLeads
+                totalLeads,
+                financialData: {
+                    totalProjectedAmount: totalProjectedAmount._sum.projectedAmount || 0,
+                    totalPreRegisteredAmount: totalPreRegisteredAmount._sum.preRegisteredAmount || 0,
+                    totalRemainingAmount: totalRemainingAmount._sum.remainingAmount || 0
+                }
             }
         });
 
@@ -667,6 +782,7 @@ exports.getLeadGenAndExecutives = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
 
 
 

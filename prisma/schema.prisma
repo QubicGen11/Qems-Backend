@@ -26,6 +26,14 @@ model CMSEntry {
 
   // One-to-Many Relation with Comments
   comments CMSEntryComment[] @relation(name: "CMSEntry_Comments")
+
+   collegeName         String?
+  yearOfStudying      Int?     // 1, 2, 3, 4
+  courseOpt          String?
+  registeredMonth     String?
+  projectedAmount     Decimal? // Assuming financial amounts need precise decimal values
+  preRegisteredAmount Decimal?
+  remainingAmount     Decimal?
 }
 
 model CMSEntryComment {
