@@ -581,7 +581,7 @@ const getTodaysAttendance = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Fetch employees with user information
+    // Fetch employees with user information, including role and status enums
     const employees = await prisma.employee.findMany({
       select: {
         employee_id: true,
@@ -595,7 +595,8 @@ const getTodaysAttendance = async (req, res) => {
             department: true,
             subDepartment: true,
             mainPosition: true,
-            role: true  // Add role to the selection
+            role: true,  
+            status: true  // ✅ Fetch Status Enum
           }
         }
       }
@@ -608,13 +609,37 @@ const getTodaysAttendance = async (req, res) => {
         date: {
           gte: today,
           lt: tomorrow
+        },
+        employee: {
+          users: {
+            none: {
+              status: "Disabled"  // ✅ Exclude employees whose status is "Disabled"
+            }
+          }
         }
+      },
+      select: {
+        employeeId: true,
+        checkin_Time: true,
+        checkout_Time: true,
+        status: true 
       }
     });
+    
+    console.log(`Found ${attendanceRecords.length} attendance records (excluding Disabled users)`);
+    
 
     console.log(`Found ${attendanceRecords.length} attendance records`);
 
-    const todaysAttendance = employees.map(employee => {
+    // ✅ Filter out employees whose status is "Disabled"
+    const activeEmployees = employees.filter(employee => {
+      const userStatus = employee.users[0]?.status || 'Active'; // Default to 'Active' if missing
+      return userStatus !== 'Disabled'; // Exclude Disabled users
+    });
+
+    console.log(`Filtered ${employees.length - activeEmployees.length} disabled employees`);
+
+    const todaysAttendance = activeEmployees.map(employee => {
       const attendance = attendanceRecords.find(
         record => record.employeeId === employee.employee_id
       );
@@ -623,7 +648,8 @@ const getTodaysAttendance = async (req, res) => {
       const mainPosition = employee.users[0]?.mainPosition || 'N/A';
       const department = employee.users[0]?.department || employee.department || 'N/A';
       const subDepartment = employee.users[0]?.subDepartment || 'N/A';
-      const role = employee.users[0]?.role || 'N/A';  // Add role
+      const role = employee.users[0]?.role || 'Employee';
+      const status = employee.users[0]?.status || 'Active'; 
 
       return {
         employeeId: employee.employee_id,
@@ -632,11 +658,12 @@ const getTodaysAttendance = async (req, res) => {
         department: department,
         subDepartment: subDepartment,
         mainPosition: mainPosition,
-        role: role,  // Add role to the return object
+        role: role, 
+        status: status, 
         profileImage: employee.employeeImg,
         checkin_Time: attendance ? attendance.checkin_Time : null,
         checkout_Time: attendance ? attendance.checkout_Time : null,
-        status: attendance ? attendance.status : 'absent',
+        attendanceStatus: attendance?.status || 'ABSENT',
         date: today
       };
     });
@@ -653,6 +680,8 @@ const getTodaysAttendance = async (req, res) => {
     });
   }
 };
+
+
 
 module.exports = { 
   clockIn, 
