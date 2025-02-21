@@ -15,10 +15,10 @@ const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
 const authenticateToken = require('./middlewares/authenticateUser');
-const leaveRequestRouter=require('./routes/leaveRequestRouter')
-const teamRouter=require('./routes/teamRouter')
+const leaveRequestRouter = require('./routes/leaveRequestRouter')
+const teamRouter = require('./routes/teamRouter')
 const documentRouter = require('./routes/documentRouter');
-const bankDetailsRouter = require('./routes/bankDetailsRouter'); 
+const bankDetailsRouter = require('./routes/bankDetailsRouter');
 const notificationRoutes = require('./routes/notificationRoutes');
 const suggestionRoutes = require('./routes/suggestionRoutes');
 const cmsRoutes = require('./routes/cmsRoutes')
@@ -40,7 +40,7 @@ app.use(session({
   secret: 'your-secret-key', // Change this to a secure secret
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: process.env.NODE_ENV === 'production',
     maxAge: 15 * 60 * 1000 // 15 minutes
   }
@@ -52,16 +52,36 @@ prisma.$on('error', (e) => {
 });
 
 // Middleware setup
-app.use(express.json({limit: '50mb'}));
-app.use(express.urlencoded({limit: '50mb', extended: true}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(morgan('dev'));
 app.use(cookieParser());
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com' ,'https://image.qubinest.com/qems/upload','https://image.qubinest.com','https://image.qubinest.com/qems','https://image.qubinest.com/upload'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-}));
+
+// Update CORS configuration
+const allowedOrigins = [
+  'http://localhost:8085', // Keep this for development
+  'https://qems.qubinest.com' ,// Your production domain,
+  'http://localhost:5173', 
+  'http://localhost:5174',
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['POST', 'OPTIONS'], // Explicitly allow needed methods
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // If using authentication
+  maxAge: 600 // Cache preflight requests
+};
+
+// Apply CORS middleware before routes
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for all routes
 
 // Routes
 app.use('/qubinest', authRouter);
