@@ -63,6 +63,15 @@ const allowedOrigins = [
   'https://qems.qubinest.com' ,// Your production domain,
   'http://localhost:5173', 
   'http://localhost:5174',
+  'http://localhost:8085',
+  'http://localhost:8082',
+  'http://localhost:8082/qems/upload',
+  'https://qg.vidyantra-dev.com/qubicgen/allCourses',
+  'https://qg.vidyantra-dev.com',
+  'https://www.qg.vidyantra-dev.com',
+  'https://qems.qubinest.com', // Production frontend
+  'https://qg.vidyantra-dev.com', 
+
 ];
 
 const corsOptions = {
