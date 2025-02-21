@@ -57,7 +57,7 @@ app.use(express.urlencoded({limit: '50mb', extended: true}));
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8085', 'https://qems.qubinest.com' ,'https://image.qubinest.com/qems/upload','https://image.qubinest.com','https://image.qubinest.com/qems'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
