@@ -65,6 +65,8 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:8085',
   'http://localhost:8082',
+  'http://localhost:8085',
+  'http://localhost:3000',
   'http://localhost:8082/qems/upload',
   'https://qg.vidyantra-dev.com/qubicgen/allCourses',
   'https://qg.vidyantra-dev.com',
@@ -82,10 +84,10 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['POST', 'OPTIONS'], // Explicitly allow needed methods
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // If using authentication
-  maxAge: 600 // Cache preflight requests
+  credentials: true,
+  maxAge: 600
 };
 
 // Apply CORS middleware before routes
