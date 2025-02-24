@@ -61,6 +61,7 @@ app.use(cookieParser());
 const allowedOrigins = [
   'http://localhost:8085', // Keep this for development
   'https://qems.qubinest.com' ,// Your production domain,
+  'https://qems.qubinest.com' ,// Your production domain,
   'http://localhost:5173', 
   'http://localhost:5174',
   'http://localhost:8085',
@@ -69,6 +70,9 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8082/qems/upload',
   'https://qg.vidyantra-dev.com/qubicgen/allCourses',
+  'https://image.qubinest.com/qems/upload',
+  'https://image.qubinest.com/upload',
+  
   'https://qg.vidyantra-dev.com',
   'https://www.qg.vidyantra-dev.com',
   'https://qems.qubinest.com', // Production frontend
