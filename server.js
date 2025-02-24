@@ -6,8 +6,6 @@ const morgan = require('morgan');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const pdf = require('html-pdf');
-const fs = require('fs');
 const employeeRoutes = require('./routes/employeeRoutes');
 const authRouter = require('./routes/authRouter');
 const userAuthRouter = require('./routes/userAuthRoute');
@@ -35,6 +33,31 @@ const prisma = new PrismaClient({
 
 const app = express();
 
+// ✅ Define allowed CORS origins
+const allowedOrigins = [
+  'https://qems.qubinest.com',
+  'http://localhost:8085',
+  'https://image.qubinest.com',
+  'https://qemsbe.qubinest.com',
+];
+
+// ✅ Apply CORS middleware BEFORE any routes
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS', 'DELETE'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle OPTIONS preflight requests
+
 // ✅ SESSION Middleware
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -46,55 +69,15 @@ app.use(session({
   }
 }));
 
-// ✅ Error handling for Prisma
-prisma.$on('error', (e) => {
-  console.error('Prisma Error:', e);
-});
-
 // ✅ Middleware setup
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(morgan('dev'));
 app.use(cookieParser());
 
-// ✅ Define allowed CORS origins
-const allowedOrigins = [
-  'https://qems.qubinest.com',
-  'http://localhost:8085',
-  'https://image.qubinest.com',
-  'https://qemsbe.qubinest.com',
-];
-
-// ✅ Improved CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow requests with no origin (e.g., server-to-server)
-    if (allowedOrigins.includes(origin)) {
-      callback(null, origin);  // Dynamically set origin
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'OPTIONS', 'DELETE'],
-  allowedHeaders: ['Authorization', 'Content-Type'],
-  credentials: true,
-};
-
-// ✅ Apply CORS middleware before all routes
-app.use(cors(corsOptions));
-
-// ✅ Handle OPTIONS preflight requests manually
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  return res.sendStatus(204);
-});
-
-// ✅ Global middleware to ensure only one `Access-Control-Allow-Origin` is set
+// ✅ Remove duplicate CORS headers
 app.use((req, res, next) => {
-  res.removeHeader('Access-Control-Allow-Origin');  // Remove if already set
+  res.removeHeader('Access-Control-Allow-Origin');
   res.removeHeader('Access-Control-Allow-Methods');
   res.removeHeader('Access-Control-Allow-Headers');
   res.removeHeader('Access-Control-Allow-Credentials');
