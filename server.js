@@ -72,18 +72,32 @@ const allowedOrigins = [
   'https://qg.vidyantra-dev.com/qubicgen/allCourses',
   'https://image.qubinest.com/qems/upload',
   'https://image.qubinest.com/upload',
+  'https://image.qubinest.com',
   
   'https://qg.vidyantra-dev.com',
   'https://www.qg.vidyantra-dev.com',
   'https://qems.qubinest.com', // Production frontend
   'https://qg.vidyantra-dev.com', 
-
+  'https://qemsbe.qubinest.com',
+ 
 ];
 
-
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 600
+};
 
 // Apply CORS middleware before routes
-
+app.use(cors(corsOptions));
 app.options('*', (req, res) => {
   res.status(204).end();
 });
