@@ -86,19 +86,12 @@ app.options('*', cors(corsOptions));
 
 // ✅ Global middleware to set headers manually
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+  res.removeHeader('Access-Control-Allow-Origin');  // Remove if already set
+  res.removeHeader('Access-Control-Allow-Methods');
+  res.removeHeader('Access-Control-Allow-Headers');
+  res.removeHeader('Access-Control-Allow-Credentials');
   next();
-})
+});
 
 // ✅ Routes
 app.use('/qubinest', authRouter);
