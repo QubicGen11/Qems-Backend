@@ -76,13 +76,13 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 
 // ✅ Remove duplicate CORS headers
-app.use((req, res, next) => {
-  res.removeHeader('Access-Control-Allow-Origin');
-  res.removeHeader('Access-Control-Allow-Methods');
-  res.removeHeader('Access-Control-Allow-Headers');
-  res.removeHeader('Access-Control-Allow-Credentials');
-  next();
-});
+// app.use((req, res, next) => {
+//   res.removeHeader('Access-Control-Allow-Origin');
+//   res.removeHeader('Access-Control-Allow-Methods');
+//   res.removeHeader('Access-Control-Allow-Headers');
+//   res.removeHeader('Access-Control-Allow-Credentials');
+//   next();
+// });
 
 // ✅ Routes
 app.use('/qubinest', authRouter);
