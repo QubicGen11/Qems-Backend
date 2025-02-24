@@ -59,15 +59,9 @@ app.use(cookieParser());
 
 // ✅ Define allowed CORS origins
 const allowedOrigins = [
-  'https://qems.qubinest.com', // Production frontend
-  'http://localhost:8085', // Local development
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:8082',
-  'http://localhost:3000',
-  'https://image.qubinest.com',
-  'https://qg.vidyantra-dev.com',
-  'https://qemsbe.qubinest.com',
+  'https://qems.qubinest.com',
+  'http://localhost:8085',
+  'https://image.qubinest.com'
 ];
 
 // ✅ Improved CORS Configuration
@@ -79,8 +73,8 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'OPTIONS', 'DELETE'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
   credentials: true,
 };
 
@@ -104,7 +98,7 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   next();
-});
+})
 
 // ✅ Routes
 app.use('/qubinest', authRouter);
