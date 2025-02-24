@@ -15,13 +15,13 @@ const attendanceRoute = require('./routes/attendanceRouter');
 const employeeRouter = require('./routes/employeeRouter');
 const reportRouter = require('./routes/reportRouter');
 const authenticateToken = require('./middlewares/authenticateUser');
-const leaveRequestRouter = require('./routes/leaveRequestRouter')
-const teamRouter = require('./routes/teamRouter')
+const leaveRequestRouter = require('./routes/leaveRequestRouter');
+const teamRouter = require('./routes/teamRouter');
 const documentRouter = require('./routes/documentRouter');
 const bankDetailsRouter = require('./routes/bankDetailsRouter');
 const notificationRoutes = require('./routes/notificationRoutes');
 const suggestionRoutes = require('./routes/suggestionRoutes');
-const cmsRoutes = require('./routes/cmsRoutes')
+const cmsRoutes = require('./routes/cmsRoutes');
 const bodyParser = require('body-parser');
 const os = require('os');
 
@@ -35,57 +35,46 @@ const prisma = new PrismaClient({
 
 const app = express();
 
-// Add session middleware BEFORE other middleware and routes
+// ✅ SESSION Middleware
 app.use(session({
-  secret: 'your-secret-key', // Change this to a secure secret
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 15 * 60 * 1000 // 15 minutes
+    maxAge: 15 * 60 * 1000, // 15 minutes
   }
 }));
 
-// Error handling for Prisma
+// ✅ Error handling for Prisma
 prisma.$on('error', (e) => {
   console.error('Prisma Error:', e);
 });
 
-// Middleware setup
+// ✅ Middleware setup
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(morgan('dev'));
 app.use(cookieParser());
 
-// Update CORS configuration
+// ✅ Define allowed CORS origins
 const allowedOrigins = [
-  'http://localhost:8085', // Keep this for development
-  'https://qems.qubinest.com' ,// Your production domain,
-  'https://qems.qubinest.com' ,// Your production domain,
-  'http://localhost:5173', 
-  'http://localhost:5174',
-  'http://localhost:8085',
-  'http://localhost:8082',
-  'http://localhost:8085',
-  'http://localhost:3000',
-  'http://localhost:8082/qems/upload',
-  'https://qg.vidyantra-dev.com/qubicgen/allCourses',
-  'https://image.qubinest.com/qems/upload',
-  'https://image.qubinest.com/upload',
-  'https://image.qubinest.com',
-  
-  'https://qg.vidyantra-dev.com',
-  'https://www.qg.vidyantra-dev.com',
   'https://qems.qubinest.com', // Production frontend
-  'https://qg.vidyantra-dev.com', 
+  'http://localhost:8085', // Local development
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:8082',
+  'http://localhost:3000',
+  'https://image.qubinest.com',
+  'https://qg.vidyantra-dev.com',
   'https://qemsbe.qubinest.com',
- 
 ];
 
+// ✅ Improved CORS Configuration
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+      callback(null, origin);  // Dynamically set origin
     } else {
       callback(new Error('Not allowed by CORS'));
     }
@@ -93,16 +82,31 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 600
 };
 
-// Apply CORS middleware before routes
+// ✅ Apply CORS middleware before all routes
 app.use(cors(corsOptions));
-app.options('*', (req, res) => {
-  res.status(204).end();
+
+// ✅ Ensure OPTIONS preflight requests return correct headers
+app.options('*', cors(corsOptions));
+
+// ✅ Global middleware to set headers manually
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
 });
 
-// Routes
+// ✅ Routes
 app.use('/qubinest', authRouter);
 app.use('/qubinest/employees', employeeRoutes);
 app.use('/qubinest', userAuthRouter);
@@ -116,28 +120,28 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/bankdetails', bankDetailsRouter);
 app.use('/qubinest', notificationRoutes);
 app.use('/documents', documentRouter);
-app.use('/qems/cms', authenticateToken, cmsRoutes); // Ensure this route uses the token verification middleware
-// app.use('/qubinest', cmsRoutes); // Ensure this route uses the token verification middleware
+app.use('/qems/cms', authenticateToken, cmsRoutes); // Ensure authentication is applied
 
-// Set view engine to EJS
+// ✅ Set view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Error handling middleware
+// ✅ Global error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
   });
 });
 
+// ✅ Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
 
-// Graceful shutdown
+// ✅ Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Closing HTTP server...');
   await prisma.$disconnect();
