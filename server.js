@@ -80,23 +80,13 @@ const allowedOrigins = [
 
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 600
-};
+
 
 // Apply CORS middleware before routes
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight for all routes
+
+app.options('*', (req, res) => {
+  res.status(204).end();
+});
 
 // Routes
 app.use('/qubinest', authRouter);
