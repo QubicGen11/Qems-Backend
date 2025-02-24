@@ -27,7 +27,7 @@ const os = require('os');
 
 dotenv.config();
 
-// Initialize Prisma with correct options
+// ✅ Initialize Prisma
 const prisma = new PrismaClient({
   log: ['query', 'error', 'warn'],
   errorFormat: 'minimal',
@@ -61,13 +61,15 @@ app.use(cookieParser());
 const allowedOrigins = [
   'https://qems.qubinest.com',
   'http://localhost:8085',
-  'https://image.qubinest.com'
+  'https://image.qubinest.com',
+  'https://qemsbe.qubinest.com',
 ];
 
 // ✅ Improved CORS Configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) return callback(null, true); // Allow requests with no origin (e.g., server-to-server)
+    if (allowedOrigins.includes(origin)) {
       callback(null, origin);  // Dynamically set origin
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -81,10 +83,16 @@ const corsOptions = {
 // ✅ Apply CORS middleware before all routes
 app.use(cors(corsOptions));
 
-// ✅ Ensure OPTIONS preflight requests return correct headers
-app.options('*', cors(corsOptions));
+// ✅ Handle OPTIONS preflight requests manually
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  return res.sendStatus(204);
+});
 
-// ✅ Global middleware to set headers manually
+// ✅ Global middleware to ensure only one `Access-Control-Allow-Origin` is set
 app.use((req, res, next) => {
   res.removeHeader('Access-Control-Allow-Origin');  // Remove if already set
   res.removeHeader('Access-Control-Allow-Methods');
