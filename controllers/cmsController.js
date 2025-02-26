@@ -674,12 +674,17 @@ exports.deleteCMSEntry = async (req, res) => {
 
 exports.getLeadGenAndExecutives = async (req, res) => {
     try {
-        // Fetch users where mainPosition is 'Lead Generation' or 'Executive'
+        // Fetch users where mainPosition is 'Lead Generation' or 'Executive' and status is not 'Disabled'
         const users = await prisma.user.findMany({
             where: {
-                OR: [
-                    { mainPosition: 'Lead Generation' },
-                    { mainPosition: 'Executive' }
+                AND: [
+                    { status: { not: "Disabled" } }, // Exclude users with status 'Disabled'
+                    {
+                        OR: [
+                            { mainPosition: 'Lead Generation' },
+                            { mainPosition: 'Executive' }
+                        ]
+                    }
                 ]
             },
             select: {
@@ -700,6 +705,7 @@ exports.getLeadGenAndExecutives = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
 
 
 exports.getCMSCounts = async (req, res) => {

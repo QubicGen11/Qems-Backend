@@ -2,9 +2,11 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const SECRET_KEY = process.env.jwtSecret || "your_secret_key"; // Use the same key for signing & verifying
+
 
 const nodemailer = require('nodemailer');
-const jwtSecret = process.env.jwtSecret;
+const jwtSecret = "wegfawgegegggg3@8!*";
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -493,6 +495,55 @@ const getAllUsers=async(req,res)=>{
   }
 }
 
+const updateUserMainPosition = async (req, res) => {
+  try {
+      // 🔹 Extract token from headers
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) {
+          return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
+      }
+
+      // 🔹 Verify token
+      const decoded = jwt.verify(token, SECRET_KEY);
+      
+      // 🔹 Check if the user is an Admin
+      if (decoded.role !== "Admin") {
+          return res.status(403).json({ success: false, message: "Forbidden: Only Admins can update main position" });
+      }
+
+      // 🔹 Get email & new position from request body
+      const { email, newMainPosition } = req.body;
+      
+      // 🔹 Update the user's mainPosition
+      const updatedUser = await prisma.user.update({
+          where: { email: email }, 
+          data: { mainPosition: newMainPosition },
+      });
+
+      return res.status(200).json({ success: true, message: "User mainPosition updated successfully", user: updatedUser });
+  } catch (error) {
+      return res.status(500).json({ success: false, message: "Internal error: " + error.message });
+  }
+};
+
+const updateMultipleUsersMainPosition = async (req, res) => {
+  try {
+      const { employeeIds, newMainPosition } = req.body; // Accept employee IDs array
+
+      const updatedUsers = await prisma.user.updateMany({
+          where: {
+              employeeId: { in: employeeIds }, // Update all users matching these IDs
+          },
+          data: { mainPosition: newMainPosition },
+      });
+
+      return res.status(200).json({ success: true, message: "Users' mainPosition updated successfully", updatedCount: updatedUsers.count });
+  } catch (error) {
+      return res.status(500).json({ success: false, message: "Internal error: " + error.message });
+  }
+};
+
+
 const updateUserStatus = async (req, res) => {
   const { email, status } = req.body;
 
@@ -676,4 +727,4 @@ const verifyForgotPasswordOTP = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, resetPassword, getAllUsers, changePassword, verifyOTP, resendOTP, updateUserStatus, forgotPassword, verifyForgotPasswordOTP };
+module.exports = { registerUser, loginUser, logoutUser, resetPassword, getAllUsers, changePassword, verifyOTP, resendOTP, updateUserStatus, forgotPassword, verifyForgotPasswordOTP , updateUserMainPosition , updateMultipleUsersMainPosition };
