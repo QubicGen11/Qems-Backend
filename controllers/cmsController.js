@@ -696,7 +696,7 @@ exports.getCMSCounts = async (req, res) => {
     try {
         const user = req.user;
 
-        const allowedRoles = ['Lead Generation', 'Executive', 'intern' , 'Product Manager'];
+        const allowedRoles = ['Lead Generation', 'Executive', 'intern', 'Product Manager'];
         console.log("Checking against allowed roles:", allowedRoles);
         console.log("User role:", user.mainPosition);
 
@@ -704,6 +704,12 @@ exports.getCMSCounts = async (req, res) => {
             console.log("Access denied - user role not in allowed list");
             return res.status(403).json({ success: false, message: 'Access Denied' });
         }
+
+        // Fetch the user's adminAccess from the database
+        const userWithAccess = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { adminAccess: true }
+        });
 
         let filter = {};
 
@@ -760,6 +766,7 @@ exports.getCMSCounts = async (req, res) => {
                 pendingFollowUp,
                 assignedLeads,
                 totalLeads,
+                adminAccess: userWithAccess.adminAccess || [], // ✅ Added adminAccess from User Table
                 financialData: {
                     totalProjectedAmount: totalProjectedAmount._sum.projectedAmount || 0,
                     totalPreRegisteredAmount: totalPreRegisteredAmount._sum.preRegisteredAmount || 0,
@@ -773,6 +780,7 @@ exports.getCMSCounts = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
 
 
 

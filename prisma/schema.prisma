@@ -109,6 +109,7 @@ model User {
   joiningDate   DateTime?
   department    String?
   subDepartment String?
+   adminAccess   String[] @default([]) 
 
   // Add the relation field to CMSEntryComment
   commentsPosted CMSEntryComment[] @relation(name: "PostedByUser")
