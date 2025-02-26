@@ -6,7 +6,7 @@ const SECRET_KEY = process.env.jwtSecret || "your_secret_key"; // Use the same k
 
 
 const nodemailer = require('nodemailer');
-const jwtSecret = "wegfawgegegggg3@8!*";
+const jwtSecret = process.env.jwtSecret;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
