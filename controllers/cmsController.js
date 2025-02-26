@@ -50,8 +50,8 @@ exports.createCMSEntry = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!email && !contact) {
-            return res.status(400).json({ success: false, message: 'At least one of email or contact field is required' });
+        if (!contact) {
+            return res.status(400).json({ success: false, message: 'Contact field is required' });
         }
 
         if (assignedTo) {
@@ -128,7 +128,7 @@ exports.createCMSEntry = async (req, res) => {
             await prisma.cMSLog.create({
                 data: {
                     action: 'CREATED',
-                    details: `Entry '${newEntry.name}' was created by ${user.username || user.email}${comment ? ' with initial comment' : ''}`,
+                    details: `Entry '${newEntry.name}'  , 'num : ${newEntry.contact}  , 'email : ${newEntry.email} was created by ${user.username || user.email}${comment ? ' with initial comment' : ''}`,
                     performedByUserId: user.email,
                     performedBy: user.username || user.email,
                     department: user.department,
@@ -216,9 +216,9 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             const seenEmails = new Set();
 
             for (const entry of excelData.Sheet1) {
-                // Validate required fields (keep this check)
-                if (!entry.email || !entry.contact.toString() || !user.email) {
-                    invalidEntries.push({ ...entry, reason: "Missing email or contact field" });
+                // Validate required field: Only contact number is mandatory
+                if (!entry.contact || !entry.contact.toString().trim()) {
+                    invalidEntries.push({ ...entry, reason: "Missing contact field" });
                     continue;
                 }
             
@@ -229,13 +229,14 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             
                 validEntries.push({
                     ...entry,
-                    contact: entry.contact.toString(), // Convert contact to string
+                    contact: entry.contact.toString().trim(), // Convert contact to string
                     yearOfStudying: entry.yearOfStudying ? parseInt(entry.yearOfStudying) : null,
                     projectedAmount: parsedProjectedAmount,
                     preRegisteredAmount: parsedPreRegisteredAmount,
                     remainingAmount // Auto-calculated remainingAmount
                 });
             }
+            
             
 
             console.log('Validation Summary:', { validEntries, invalidEntries });
@@ -250,7 +251,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                 for (const entry of validEntries) {
                     const newEntry = await prisma.cMSEntry.create({
                         data: {
-                            name: entry.name,
+                            name: entry.name?.trim() || "",
                             contact: entry.contact,
                             email: entry.email,
                             branch: entry.branch,
@@ -271,7 +272,7 @@ exports.validateAndImportCMSEntry = async (req, res) => {
                     await prisma.cMSLog.create({
                         data: {
                             action: 'CREATED',
-                            details: `Entry '${newEntry.name}' was created by ${user.username || user.email}`,
+                            details: `Entry '${newEntry.name} ' 'num : ${newEntry.contact} ' , 'email : ${newEntry.email}  was created by ${user.username || user.email}`,
                             performedByUserId: user.email,
                             performedBy: user.username || user.email,
                             department: user.department,
@@ -425,7 +426,7 @@ exports.updateStatus = async (req, res) => {
         const logEntry = await prisma.cMSLog.create({
             data: {
                 action: 'UPDATED',
-                details: `Entry '${updatedEntry.name}' email : ${updatedEntry.email} status was updated by ${user.username || user.email}`,
+                details: `Entry '${updatedEntry.name}',  email : ${updatedEntry.email} , num : ${updatedEntry.contact}status was updated by ${user.username || user.email}`,
                 performedByUserId: user.email,
                 performedBy: user.username || user.email,
                 department: user.department,
@@ -593,7 +594,7 @@ exports.editCMSEntry = async (req, res) => {
         await prisma.cMSLog.create({
             data: {
                 action: 'UPDATED',
-                details: `Entry '${updatedEntry.name}' was updated by ${user.username || user.email}`,
+                details: `Entry '${updatedEntry.name}' , email : ${updatedEntry.email}  , num : ${updatedEntry.contact}  was updated by ${user.username || user.email}`,
                 performedByUserId: user.email,
                 performedBy: user.username || user.email,
                 department: user.department,
@@ -635,7 +636,7 @@ exports.deleteCMSEntry = async (req, res) => {
         await prisma.cMSLog.create({
             data: {
                 action: 'DELETED',
-                details: `Entry '${entry.name}' was deleted by ${user.username || user.email}`,
+                details: `Entry '${entry.name}' , 'num : ${entry.contact}  , 'email : ${entry.email} was deleted by ${user.username || user.email}`,
                 performedByUserId: user.email,
                 performedBy: user.username || user.email,
                 department: user.department,
