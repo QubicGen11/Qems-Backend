@@ -74,20 +74,20 @@ exports.createCMSEntry = async (req, res) => {
         const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount; // Auto-calculate remaining amount
 
         // Check if contact already exists
-        if (email && contact) {
-            const existingEntry = await prisma.cMSEntry.findFirst({
-                where: {
-                    OR: [
-                        { email: { equals: email, mode: "insensitive" } },
-                        { contact: { equals: contact, mode: "insensitive" } }
-                    ]
-                }
-            });
+        // if (email && contact) {
+        //     const existingEntry = await prisma.cMSEntry.findFirst({
+        //         where: {
+        //             OR: [
+        //                 { email: { equals: email, mode: "insensitive" } },
+        //                 { contact: { equals: contact, mode: "insensitive" } }
+        //             ]
+        //         }
+        //     });
 
-            if (existingEntry) {
-                return res.status(409).json({ success: false, message: 'Contact already exists' });
-            }
-        }
+        //     if (existingEntry) {
+        //         return res.status(409).json({ success: false, message: 'Contact already exists' });
+        //     }
+        // }
 
         // Create entry using transaction
         const result = await prisma.$transaction(async (prisma) => {
@@ -216,43 +216,27 @@ exports.validateAndImportCMSEntry = async (req, res) => {
             const seenEmails = new Set();
 
             for (const entry of excelData.Sheet1) {
-                // Validate required fields
+                // Validate required fields (keep this check)
                 if (!entry.email || !entry.contact.toString() || !user.email) {
                     invalidEntries.push({ ...entry, reason: "Missing email or contact field" });
                     continue;
                 }
-
-                // Check for duplicate entries within the uploaded file
-                if (seenContacts.has(entry.contact.toString()) || seenEmails.has(entry.email)) {
-                    invalidEntries.push({ ...entry, reason: "Duplicate entry in Excel file" });
-                    continue;
-                }
-                seenContacts.add(entry.contact.toString());
-                seenEmails.add(entry.email);
-
-                // Check if contact or email already exists in the database
-                const existingEntry = await prisma.cMSEntry.findFirst({
-                    where: { OR: [{ email: entry.email }, { contact: entry.contact.toString() }] }
+            
+                // Convert numeric fields properly
+                const parsedProjectedAmount = entry.projectedAmount ? parseFloat(entry.projectedAmount) : 0;
+                const parsedPreRegisteredAmount = entry.preRegisteredAmount ? parseFloat(entry.preRegisteredAmount) : 0;
+                const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount;
+            
+                validEntries.push({
+                    ...entry,
+                    contact: entry.contact.toString(), // Convert contact to string
+                    yearOfStudying: entry.yearOfStudying ? parseInt(entry.yearOfStudying) : null,
+                    projectedAmount: parsedProjectedAmount,
+                    preRegisteredAmount: parsedPreRegisteredAmount,
+                    remainingAmount // Auto-calculated remainingAmount
                 });
-
-                if (existingEntry) {
-                    invalidEntries.push({ ...entry, reason: "Duplicate entry in database" });
-                } else {
-                    // Convert numeric fields properly
-                    const parsedProjectedAmount = entry.projectedAmount ? parseFloat(entry.projectedAmount) : 0;
-                    const parsedPreRegisteredAmount = entry.preRegisteredAmount ? parseFloat(entry.preRegisteredAmount) : 0;
-                    const remainingAmount = parsedProjectedAmount - parsedPreRegisteredAmount;
-
-                    validEntries.push({
-                        ...entry,
-                        contact: entry.contact.toString(), // Convert contact to string
-                        yearOfStudying: entry.yearOfStudying ? parseInt(entry.yearOfStudying) : null,
-                        projectedAmount: parsedProjectedAmount,
-                        preRegisteredAmount: parsedPreRegisteredAmount,
-                        remainingAmount // Auto-calculated remainingAmount
-                    });
-                }
             }
+            
 
             console.log('Validation Summary:', { validEntries, invalidEntries });
 
